@@ -1,0 +1,120 @@
+- generic [ref=e2]:
+  - region
+  - link "Skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#start-of-content"
+  - main [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e11]:
+          - img [ref=e14]
+          - img [ref=e17]
+        - heading "Authorize GitHub CLI" [level=1] [ref=e19]
+      - generic [ref=e21]:
+        - img [ref=e22]
+        - text: This authorization was requested from
+        - strong [ref=e24]: Kobe 119.24.26.40
+        - text: "on"
+        - time [ref=e25]: April 11th, 2026 at 15:49 (JST)
+        - paragraph [ref=e26]: Make sure you trust this device as it will get access to your account.
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - img "@inaoka725-sys" [ref=e31]
+              - strong [ref=e32]: GitHub CLI
+              - text: by
+              - strong [ref=e33]:
+                - link "GitHub" [ref=e34] [cursor=pointer]:
+                  - /url: /github
+              - generic [ref=e35]:
+                - text: wants to access your
+                - strong [ref=e36]: inaoka725-sys
+                - text: account
+            - generic [ref=e37]:
+              - generic [ref=e38]:
+                - button "More information about this request" [ref=e39] [cursor=pointer]:
+                  - img [ref=e40]
+                - img [ref=e42]
+                - generic [ref=e45]:
+                  - strong [ref=e46]: Gists
+                  - generic [ref=e48]:
+                    - emphasis [ref=e49]: Read and write
+                    - text: access
+              - generic [ref=e50]:
+                - button "More information about this request" [ref=e51] [cursor=pointer]:
+                  - img [ref=e52]
+                - img [ref=e54]
+                - generic [ref=e57]:
+                  - strong [ref=e58]: Organizations and teams
+                  - generic [ref=e60]:
+                    - emphasis [ref=e61]: Read-only
+                    - text: access
+              - generic [ref=e62]:
+                - button "More information about this request" [ref=e63] [cursor=pointer]:
+                  - img [ref=e64]
+                - img [ref=e66]
+                - generic [ref=e69]:
+                  - strong [ref=e70]: Repositories
+                  - generic [ref=e72]:
+                    - text: Public and
+                    - emphasis [ref=e73]: private
+          - generic [ref=e74]:
+            - generic [ref=e77]:
+              - button "Cancel" [ref=e78] [cursor=pointer]
+              - button "Authorize github" [ref=e79] [cursor=pointer]
+            - paragraph [ref=e81]:
+              - text: Requested from
+              - strong [ref=e82]: Kobe 119.24.26.40
+              - text: "on"
+              - time [ref=e83]: April 11th, 2026 at 15:49 (JST)
+        - generic [ref=e84]:
+          - generic:
+            - generic [ref=e86]:
+              - img [ref=e87]
+              - text: Owned & operated by GitHub
+            - generic [ref=e90]:
+              - img [ref=e91]
+              - text: Created
+              - strong [ref=e93]: 7 years ago
+            - generic [ref=e95]:
+              - img [ref=e96]
+              - strong [ref=e98]: More than 1K
+              - generic [ref=e99]: GitHub users
+        - link "Learn more about OAuth" [ref=e101] [cursor=pointer]:
+          - /url: https://docs.github.com/articles/authorizing-oauth-apps
+  - contentinfo [ref=e102]:
+    - heading "Footer" [level=2] [ref=e103]
+    - generic [ref=e104]:
+      - generic [ref=e105]:
+        - link "GitHub Homepage" [ref=e106] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e107]
+        - generic [ref=e109]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e110]:
+        - heading "Footer navigation" [level=3] [ref=e111]
+        - list "Footer navigation" [ref=e112]:
+          - listitem [ref=e113]:
+            - link "Terms" [ref=e114] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e115]:
+            - link "Privacy" [ref=e116] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e117]:
+            - link "Security" [ref=e118] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e119]:
+            - link "Status" [ref=e120] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e121]:
+            - link "Community" [ref=e122] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e123]:
+            - link "Docs" [ref=e124] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e125]:
+            - link "Contact" [ref=e126] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e127]:
+            - button "Manage cookies" [ref=e129] [cursor=pointer]
+          - listitem [ref=e130]:
+            - button "Do not share my personal information" [ref=e132] [cursor=pointer]

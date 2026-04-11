@@ -1,0 +1,46 @@
+- generic [ref=e2]:
+  - region
+  - link "Skip to content" [ref=e3] [cursor=pointer]:
+    - /url: "#start-of-content"
+  - generic [ref=e6]:
+    - img [ref=e11]
+    - generic [ref=e15]:
+      - img [ref=e17]
+      - heading "Uh oh, we couldn't find anything" [level=2] [ref=e20]
+      - paragraph [ref=e21]: Please make sure you entered the user code correctly.
+  - contentinfo [ref=e22]:
+    - heading "Footer" [level=2] [ref=e23]
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - link "GitHub Homepage" [ref=e26] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e27]
+        - generic [ref=e29]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e30]:
+        - heading "Footer navigation" [level=3] [ref=e31]
+        - list "Footer navigation" [ref=e32]:
+          - listitem [ref=e33]:
+            - link "Terms" [ref=e34] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e35]:
+            - link "Privacy" [ref=e36] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e37]:
+            - link "Security" [ref=e38] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e39]:
+            - link "Status" [ref=e40] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e41]:
+            - link "Community" [ref=e42] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e43]:
+            - link "Docs" [ref=e44] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e45]:
+            - link "Contact" [ref=e46] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e47]:
+            - button "Manage cookies" [ref=e49] [cursor=pointer]
+          - listitem [ref=e50]:
+            - button "Do not share my personal information" [ref=e52] [cursor=pointer]

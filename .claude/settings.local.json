@@ -1,0 +1,14 @@
+{
+  "enabledMcpjsonServers": [
+    "playwright",
+    "password-manager",
+    "gmail"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /home/shige/.claude/firstAPP/.git/hooks)",
+      "Bash(cat)",
+      "Bash(chmod +x /home/shige/.claude/firstAPP/.git/hooks/prepare-commit-msg)"
+    ]
+  }
+}
