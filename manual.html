@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>時間外作業報告書アプリ｜使い方マニュアル</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic Pro', sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      line-height: 1.7;
+    }
+
+    /* ヘッダー */
+    .top-header {
+      background: linear-gradient(135deg, #1a3a5c 0%, #2a5a8c 100%);
+      color: white;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .top-header .tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    .top-header h1 { font-size: 26px; font-weight: bold; }
+    .top-header p { margin-top: 8px; font-size: 14px; opacity: 0.85; }
+
+    /* 目次 */
+    .toc {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 24px auto;
+      max-width: 860px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .toc h2 { font-size: 15px; color: #1a3a5c; margin-bottom: 12px; }
+    .toc-list { display: flex; flex-direction: column; gap: 6px; }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: #f5f7fa;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #1a3a5c;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .toc-item:hover { background: #e8eff7; }
+    .toc-num {
+      background: #1a3a5c;
+      color: white;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    /* セクション共通 */
+    .section {
+      max-width: 860px;
+      margin: 0 auto 32px;
+      padding: 0 16px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .section-num {
+      background: #1a3a5c;
+      color: white;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    .section-title { font-size: 20px; font-weight: bold; color: #1a3a5c; }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-bottom: 16px;
+    }
+
+    /* ステップ */
+    .steps { display: flex; flex-direction: column; gap: 16px; }
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .step-num {
+      background: #e8eff7;
+      color: #1a3a5c;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-body h3 { font-size: 15px; margin-bottom: 4px; color: #1a3a5c; }
+    .step-body p { font-size: 13px; color: #555; }
+
+    /* フォームモック */
+    .form-mock {
+      background: #f8f9fb;
+      border: 1px solid #e0e4ea;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+    .mock-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .mock-input {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+    .mock-input.highlight {
+      border-color: #1a3a5c;
+      box-shadow: 0 0 0 3px rgba(26,58,92,0.12);
+    }
+    .mock-radio-group { display: flex; gap: 8px; margin-bottom: 14px; }
+    .mock-radio {
+      flex: 1; padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .mock-radio.active {
+      background: #1a3a5c;
+      color: white;
+      border-color: #1a3a5c;
+    }
+    .mock-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* タイムライン図 */
+    .timeline-wrap {
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+    .timeline {
+      min-width: 600px;
+      padding: 20px 12px;
+    }
+    .tl-bar-row {
+      position: relative;
+      height: 60px;
+      margin-bottom: 8px;
+    }
+    .tl-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 4px;
+      padding: 0 0;
+    }
+    .tl-track {
+      position: relative;
+      height: 36px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .tl-seg {
+      position: absolute;
+      top: 0; height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+    }
+    .tl-seg.normal { background: #bdc3c7; }
+    .tl-seg.regular { background: #2980b9; }
+    .tl-seg.night { background: #8e44ad; }
+    .tl-seg.break { background: repeating-linear-gradient(45deg, #ddd, #ddd 4px, #eee 4px, #eee 8px); }
+    .tl-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .tl-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .tl-legend-box {
+      width: 16px; height: 16px;
+      border-radius: 4px;
+    }
+    .tl-arrow {
+      position: absolute;
+      top: -24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: #e74c3c;
+    }
+    .tl-arrow::after {
+      content: '▼';
+      font-size: 10px;
+      line-height: 1;
+    }
+
+    /* ポイントボックス */
+    .point-box {
+      border-left: 4px solid #1a3a5c;
+      background: #f0f5fb;
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    .point-box.warn {
+      border-color: #e67e22;
+      background: #fef5ec;
+    }
+    .point-box.ok {
+      border-color: #27ae60;
+      background: #eafaf1;
+    }
+    .point-box strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+    /* 結果モック */
+    .result-mock {
+      background: #f8f9fb;
+      border: 1px solid #e0e4ea;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .result-row:last-child { border-bottom: none; }
+    .result-label { font-size: 13px; color: #555; }
+    .result-value { font-size: 26px; font-weight: bold; color: #1a3a5c; }
+    .result-value span { font-size: 13px; font-weight: normal; color: #888; }
+
+    /* 比較カード */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .compare-card {
+      border: 2px solid #e0e4ea;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .compare-card.weekday { border-color: #2980b9; }
+    .compare-card.holiday { border-color: #e74c3c; }
+    .compare-card h3 {
+      font-size: 14px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .compare-card.weekday h3 { background: #eaf2fb; color: #2980b9; }
+    .compare-card.holiday h3 { background: #fdecea; color: #e74c3c; }
+    .compare-card p { font-size: 12px; color: #555; line-height: 1.8; }
+
+    /* 休憩表 */
+    table.break-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .break-table th {
+      background: #1a3a5c;
+      color: white;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .break-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .break-table tr:last-child td { border-bottom: none; }
+    .break-table tr:nth-child(even) td { background: #f8f9fb; }
+
+    /* Excel出力モック */
+    .excel-preview {
+      border: 2px solid #27ae60;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .excel-header-bar {
+      background: #27ae60;
+      color: white;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .excel-body {
+      padding: 16px;
+      background: #f9fef9;
+    }
+    .excel-row {
+      display: grid;
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+    .excel-cell {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+    .excel-cell.header {
+      background: #c8e6c9;
+      font-weight: bold;
+    }
+    .excel-cell.blue { background: #e3f2fd; }
+
+    /* ボタンモック */
+    .btn-mock {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 12px;
+    }
+    .btn-primary { background: #1a3a5c; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+    .btn-danger { background: #e74c3c; color: white; font-size: 13px; padding: 6px 14px; border-radius: 6px; }
+
+    /* よくある質問 */
+    .faq-item {
+      border: 1px solid #e0e4ea;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .faq-q {
+      background: #f5f7fa;
+      padding: 14px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #1a3a5c;
+    }
+    .faq-q::before { content: 'Q. '; color: #e74c3c; }
+    .faq-a {
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #555;
+      background: white;
+    }
+    .faq-a::before { content: 'A. '; font-weight: bold; color: #27ae60; }
+
+    /* フッター */
+    footer {
+      background: #1a3a5c;
+      color: white;
+      text-align: center;
+      padding: 24px;
+      margin-top: 40px;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .app-link {
+      display: block;
+      text-align: center;
+      margin: 0 auto 24px;
+      max-width: 860px;
+      padding: 0 16px;
+    }
+    .app-link a {
+      display: inline-block;
+      background: #1a3a5c;
+      color: white;
+      padding: 12px 32px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    @media (max-width: 560px) {
+      .compare-grid { grid-template-columns: 1fr; }
+      .mock-grid { grid-template-columns: 1fr; }
+      .top-header h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="top-header">
+  <div class="tag">使い方マニュアル</div>
+  <h1>時間外作業報告書アプリ</h1>
+  <p>残業時間の自動計算からExcel出力まで、かんたん操作ガイド</p>
+</div>
+
+<!-- アプリリンク -->
+<div class="app-link" style="margin-top:24px;">
+  <a href="index.html" target="_blank">アプリを開く →</a>
+</div>
+
+<!-- 目次 -->
+<div class="toc" style="padding:20px 24px;">
+  <h2>もくじ</h2>
+  <div class="toc-list">
+    <a class="toc-item" href="#sec1"><div class="toc-num">1</div>アプリの画面構成</a>
+    <a class="toc-item" href="#sec2"><div class="toc-num">2</div>作業内容を入力する</a>
+    <a class="toc-item" href="#sec3"><div class="toc-num">3</div>残業時間の計算ルール</a>
+    <a class="toc-item" href="#sec4"><div class="toc-num">4</div>登録・削除する</a>
+    <a class="toc-item" href="#sec5"><div class="toc-num">5</div>Excelファイルをダウンロードする</a>
+    <a class="toc-item" href="#sec6"><div class="toc-num">6</div>よくある質問</a>
+  </div>
+</div>
+
+
+<!-- ===== セクション1 ===== -->
+<div class="section" id="sec1">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <div class="section-title">アプリの画面構成</div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;color:#555;margin-bottom:20px;">アプリを開くと、上から順に３つのエリアで構成されています。</p>
+
+    <!-- 画面構成図 -->
+    <div style="border:2px solid #1a3a5c;border-radius:12px;overflow:hidden;max-width:400px;margin:0 auto;">
+      <div style="background:#1a3a5c;color:white;padding:12px;text-align:center;font-size:13px;font-weight:bold;">時間外作業報告書</div>
+
+      <div style="border:2px dashed #2980b9;border-radius:8px;margin:12px;padding:12px;position:relative;">
+        <div style="position:absolute;top:-10px;left:10px;background:#2980b9;color:white;font-size:11px;padding:2px 10px;border-radius:10px;font-weight:bold;">① 入力エリア</div>
+        <div style="font-size:12px;color:#555;">日付・氏名・オーダー番号・件名<br>区分・平日/休日・開始/終了時間</div>
+        <div style="background:#f0f5fb;border-radius:8px;padding:10px;margin-top:10px;text-align:center;font-size:12px;">
+          <span style="color:#888;">自動計算結果 →</span>
+          <strong style="color:#1a3a5c;font-size:18px;margin:0 8px;">3.5</strong>H /
+          <strong style="color:#1a3a5c;font-size:18px;margin:0 8px;">0.5</strong>H
+        </div>
+        <div style="background:#1a3a5c;color:white;border-radius:8px;padding:8px;text-align:center;font-size:13px;margin-top:10px;">この内容を追加</div>
+      </div>
+
+      <div style="border:2px dashed #27ae60;border-radius:8px;margin:12px;padding:12px;position:relative;">
+        <div style="position:absolute;top:-10px;left:10px;background:#27ae60;color:white;font-size:11px;padding:2px 10px;border-radius:10px;font-weight:bold;">② 合計・出力エリア</div>
+        <div style="display:flex;justify-content:space-around;margin-bottom:10px;">
+          <div style="text-align:center;font-size:12px;"><div style="font-size:20px;font-weight:bold;color:#1a3a5c;">3</div>件</div>
+          <div style="text-align:center;font-size:12px;"><div style="font-size:20px;font-weight:bold;color:#1a3a5c;">7.0</div>普通H</div>
+          <div style="text-align:center;font-size:12px;"><div style="font-size:20px;font-weight:bold;color:#1a3a5c;">1.5</div>深夜H</div>
+        </div>
+        <div style="background:#27ae60;color:white;border-radius:8px;padding:8px;text-align:center;font-size:13px;">Excelダウンロード</div>
+      </div>
+
+      <div style="border:2px dashed #e67e22;border-radius:8px;margin:12px;padding:12px;position:relative;">
+        <div style="position:absolute;top:-10px;left:10px;background:#e67e22;color:white;font-size:11px;padding:2px 10px;border-radius:10px;font-weight:bold;">③ 一覧エリア</div>
+        <div style="font-size:12px;color:#555;">登録した作業の一覧<br>各エントリの削除も可能</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション2 ===== -->
+<div class="section" id="sec2">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <div class="section-title">作業内容を入力する</div>
+  </div>
+
+  <div class="card">
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>基本情報を入力する</h3>
+          <p>日付・報告者氏名・オーダー番号・件名を入力します。</p>
+          <div class="form-mock" style="margin-top:12px;">
+            <div class="mock-grid">
+              <div>
+                <div class="mock-label">日付</div>
+                <div class="mock-input highlight">2026/04/05</div>
+              </div>
+              <div>
+                <div class="mock-label">報告者氏名</div>
+                <div class="mock-input highlight">山田 太郎</div>
+              </div>
+              <div>
+                <div class="mock-label">オーダー №</div>
+                <div class="mock-input">A-2026-001</div>
+              </div>
+              <div>
+                <div class="mock-label">件名</div>
+                <div class="mock-input">設備点検作業</div>
+              </div>
+            </div>
+          </div>
+          <div class="point-box" style="margin-top:10px;">
+            <strong>ポイント</strong>日付は今日の日付が自動で入ります。変更が必要な場合は入力してください。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>作業区分を選ぶ</h3>
+          <p>現場作業か社内作業かをタップして選択します。</p>
+          <div style="margin-top:12px;">
+            <div class="mock-label">区分</div>
+            <div class="mock-radio-group">
+              <div class="mock-radio active">現場作業</div>
+              <div class="mock-radio">社内作業</div>
+            </div>
+          </div>
+          <div class="point-box ok" style="margin-top:10px;">
+            <strong>選んだほうが青くなります</strong>現場作業と社内作業でExcelのシートが区別されます。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>平日 / 休日を選ぶ</h3>
+          <p>作業日が平日か休日（土日祝）かを選びます。<br>計算ルールが変わります（→詳しくはセクション3）</p>
+          <div style="margin-top:12px;">
+            <div class="mock-label">平日 / 休日</div>
+            <div class="mock-radio-group">
+              <div class="mock-radio active">平日</div>
+              <div class="mock-radio">休日</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>作業時間を入力する</h3>
+          <p>作業開始時間と終了時間を入力します。<br>日をまたぐ場合（例: 22:00開始 → 翌2:00終了）も正しく計算されます。</p>
+          <div class="form-mock" style="margin-top:12px;">
+            <div class="mock-grid">
+              <div>
+                <div class="mock-label">作業開始時間</div>
+                <div class="mock-input highlight">09:00</div>
+              </div>
+              <div>
+                <div class="mock-label">作業終了時間</div>
+                <div class="mock-input highlight">23:00</div>
+              </div>
+            </div>
+          </div>
+          <div class="point-box warn" style="margin-top:10px;">
+            <strong>翌日にまたぐ場合</strong>終了時間が開始時間より前の場合（例: 22:00開始 → 02:00終了）、自動で翌日として計算します。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>計算結果を確認する</h3>
+          <p>入力すると自動的に残業時間が計算・表示されます。</p>
+          <div class="result-mock" style="margin-top:12px;">
+            <div class="result-row">
+              <div class="result-label">普通残業</div>
+              <div class="result-value">3.5<span> H</span></div>
+            </div>
+            <div class="result-row">
+              <div class="result-label">深夜残業</div>
+              <div class="result-value">0.5<span> H</span></div>
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:8px;">残業開始時間: 18:30（勤務開始から9時間後）</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション3 ===== -->
+<div class="section" id="sec3">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <div class="section-title">残業時間の計算ルール</div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:16px;">普通残業・深夜残業の区分</h3>
+
+    <!-- 24時間タイムライン -->
+    <div class="timeline-wrap">
+      <div class="timeline">
+        <div style="font-size:13px;font-weight:bold;color:#555;margin-bottom:8px;">1日の時間帯区分</div>
+        <div class="tl-labels">
+          <span>0:00</span><span>3:00</span><span>6:00</span><span>9:00</span>
+          <span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span><span>24:00</span>
+        </div>
+        <div class="tl-track">
+          <!-- 深夜 0:00-6:00 = 0-25% -->
+          <div class="tl-seg night" style="left:0%;width:25%;">深夜残業</div>
+          <!-- 普通 6:00-22:00 = 25-91.67% -->
+          <div class="tl-seg regular" style="left:25%;width:66.67%;">普通残業</div>
+          <!-- 深夜 22:00-24:00 = 91.67-100% -->
+          <div class="tl-seg night" style="left:91.67%;width:8.33%;">深夜</div>
+        </div>
+        <div class="tl-legend" style="margin-top:10px;">
+          <div class="tl-legend-item">
+            <div class="tl-legend-box" style="background:#2980b9;"></div>
+            <span>普通残業（6:00〜22:00）</span>
+          </div>
+          <div class="tl-legend-item">
+            <div class="tl-legend-box" style="background:#8e44ad;"></div>
+            <span>深夜残業（22:00〜翌6:00）</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 平日 vs 休日 比較 -->
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:4px;">平日と休日の違い</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:12px;">「平日」と「休日」では、残業のカウント開始タイミングが異なります。</p>
+
+    <div class="compare-grid">
+      <div class="compare-card weekday">
+        <h3>平日</h3>
+        <p>
+          <strong style="color:#333;">勤務開始から9時間後</strong>が残業開始です。<br><br>
+          例：9:00 出社の場合<br>
+          → 18:30 から残業カウント<br>
+          （18:00〜18:30 は休憩のため）<br><br>
+          それより前の時間は<br>通常勤務扱いで計算されません。
+        </p>
+      </div>
+      <div class="compare-card holiday">
+        <h3>休日</h3>
+        <p>
+          <strong style="color:#333;">作業開始から全時間</strong>が残業です。<br><br>
+          例：9:00〜23:00 の場合<br>
+          → 9:00 から残業カウント開始<br><br>
+          通常勤務時間の概念がなく、<br>働いた時間がすべて<br>残業として計算されます。
+        </p>
+      </div>
+    </div>
+
+    <!-- 平日タイムライン例 -->
+    <div style="margin-top:20px;">
+      <div style="font-size:13px;font-weight:bold;color:#555;margin-bottom:8px;">【平日の例】9:00 〜 23:00 勤務</div>
+      <div class="timeline-wrap">
+        <div class="timeline" style="padding:10px 12px;">
+          <div class="tl-labels" style="font-size:10px;">
+            <span>9:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span><span>23:00</span>
+          </div>
+          <div class="tl-track" style="height:40px;border-radius:8px;">
+            <!-- 通常勤務 9:00-18:30 = 0% - 68.75% (9.5/13.8hを概算) -->
+            <div class="tl-seg normal" style="left:0%;width:68%;font-size:12px;">通常勤務（9h）</div>
+            <!-- 休憩 18:00-18:30 ≈ 65.2%-68.1% -->
+            <div class="tl-seg break" style="left:64.3%;width:3.6%;"></div>
+            <!-- 普通残業 18:30-22:00 = 68%-86.9% -->
+            <div class="tl-seg regular" style="left:68%;width:25%;font-size:12px;">普通残業<br>3.5h</div>
+            <!-- 休憩 22:00-22:30 -->
+            <div class="tl-seg break" style="left:93%;width:3.6%;"></div>
+            <!-- 深夜残業 22:30-23:00 -->
+            <div class="tl-seg night" style="left:96.4%;width:3.6%;font-size:10px;">深夜<br>0.5h</div>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:6px;">
+            斜線部分 = 休憩時間（自動で差し引かれます）
+          </div>
+        </div>
+      </div>
+
+      <!-- 休日タイムライン例 -->
+      <div style="font-size:13px;font-weight:bold;color:#555;margin:16px 0 8px;">【休日の例】9:00 〜 23:00 勤務</div>
+      <div class="timeline-wrap">
+        <div class="timeline" style="padding:10px 12px;">
+          <div class="tl-labels" style="font-size:10px;">
+            <span>9:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span><span>23:00</span>
+          </div>
+          <div class="tl-track" style="height:40px;border-radius:8px;">
+            <!-- 普通残業 9:00-12:00 -->
+            <div class="tl-seg regular" style="left:0%;width:21.7%;font-size:12px;"></div>
+            <!-- 休憩 12:00-13:00 -->
+            <div class="tl-seg break" style="left:21.7%;width:7.2%;"></div>
+            <!-- 普通残業 13:00-15:00 -->
+            <div class="tl-seg regular" style="left:28.9%;width:14.5%;"></div>
+            <!-- 休憩 15:00-15:30 -->
+            <div class="tl-seg break" style="left:43.4%;width:3.6%;"></div>
+            <!-- 普通残業 15:30-18:00 -->
+            <div class="tl-seg regular" style="left:47%;width:18%;font-size:11px;">普通残業<br>合計11.0h</div>
+            <!-- 休憩 18:00-18:30 -->
+            <div class="tl-seg break" style="left:65%;width:3.6%;"></div>
+            <!-- 普通残業 18:30-22:00 -->
+            <div class="tl-seg regular" style="left:68.6%;width:24.6%;"></div>
+            <!-- 休憩 22:00-22:30 -->
+            <div class="tl-seg break" style="left:93%;width:3.6%;"></div>
+            <!-- 深夜残業 22:30-23:00 -->
+            <div class="tl-seg night" style="left:96.4%;width:3.6%;font-size:10px;">深夜<br>0.5h</div>
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:6px;">
+            休日は最初から全て残業。3回の休憩（計2h）が自動で差し引かれます。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 休憩時間一覧 -->
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:8px;">自動で差し引かれる休憩時間</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:4px;">以下の休憩時間は、残業時間に含まれた場合に自動で差し引かれます。</p>
+
+    <table class="break-table">
+      <thead>
+        <tr>
+          <th>休憩時間</th>
+          <th>時間</th>
+          <th>備考</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>12:00 〜 13:00</td><td>1.0h</td><td>昼休憩</td></tr>
+        <tr><td>15:00 〜 15:30</td><td>0.5h</td><td>午後休憩</td></tr>
+        <tr><td>18:00 〜 18:30</td><td>0.5h</td><td>夕方休憩</td></tr>
+        <tr><td>22:00 〜 22:30</td><td>0.5h</td><td>深夜突入前休憩</td></tr>
+        <tr><td>翌 2:00 〜 3:00</td><td>1.0h</td><td>夜間休憩</td></tr>
+        <tr><td>翌 6:00 〜 6:30</td><td>0.5h</td><td>早朝休憩</td></tr>
+        <tr><td>翌 8:30 〜 9:00</td><td>0.5h</td><td>朝休憩</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box" style="margin-top:12px;">
+      <strong>自動計算なので入力不要</strong>作業開始・終了時間を入力すれば、この休憩時間はアプリが自動で計算から除いてくれます。
+    </div>
+  </div>
+
+  <!-- 計算例 -->
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:16px;">計算例</h3>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#f8f9fb;border-radius:10px;padding:14px;">
+        <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px;">例① 平日　9:00 〜 23:00</div>
+        <div style="font-size:12px;color:#555;line-height:2;">
+          残業開始: 18:30（9:00 + 9時間 + 18:00〜18:30休憩）<br>
+          普通残業: 18:30〜22:00 ＝ <strong>3.5H</strong><br>
+          　　　　　（22:00〜22:30 休憩）<br>
+          深夜残業: 22:30〜23:00 ＝ <strong>0.5H</strong>
+        </div>
+      </div>
+      <div style="background:#f8f9fb;border-radius:10px;padding:14px;">
+        <div style="font-size:13px;font-weight:bold;color:#1a3a5c;margin-bottom:8px;">例② 平日　14:00 〜 翌1:00</div>
+        <div style="font-size:12px;color:#555;line-height:2;">
+          残業開始: 23:00（14:00 + 9時間）<br>
+          普通残業: なし（23:00以降は深夜帯）<br>
+          深夜残業: 23:00〜1:00 ＝ <strong>2.0H</strong>
+        </div>
+      </div>
+      <div style="background:#fef5ec;border-radius:10px;padding:14px;">
+        <div style="font-size:13px;font-weight:bold;color:#e67e22;margin-bottom:8px;">例③ 休日　9:00 〜 23:00</div>
+        <div style="font-size:12px;color:#555;line-height:2;">
+          残業開始: 9:00（休日は開始から全て残業）<br>
+          普通残業: 9:00〜22:00（休憩3回 計2h を除く）＝ <strong>11.0H</strong><br>
+          深夜残業: 22:30〜23:00 ＝ <strong>0.5H</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション4 ===== -->
+<div class="section" id="sec4">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <div class="section-title">登録・削除する</div>
+  </div>
+
+  <div class="card">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>「この内容を追加」ボタンを押す</h3>
+          <p>入力内容を確認したら、青いボタンを押して一覧に登録します。</p>
+          <div style="margin-top:12px;">
+            <div class="btn-mock btn-primary" style="display:inline-block;">この内容を追加</div>
+          </div>
+          <div class="point-box" style="margin-top:12px;">
+            <strong>日付・氏名は入力必須です</strong>これらが空の場合、登録できません。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>一覧で内容を確認する</h3>
+          <p>登録するとカード形式で一覧表示されます。</p>
+          <!-- 登録済みカードのモック -->
+          <div style="border:1px solid #e0e4ea;border-radius:10px;padding:14px;margin-top:12px;background:#f8f9fb;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-size:12px;color:#888;">2026年4月5日（日）</div>
+                <div style="font-size:15px;font-weight:bold;color:#1a3a5c;">山田 太郎</div>
+                <div style="margin-top:6px;">
+                  <span style="background:#e8f8f0;color:#27ae60;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;">現場作業</span>
+                  <span style="background:#fdecea;color:#e74c3c;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:4px;margin-left:4px;">休日</span>
+                </div>
+                <div style="font-size:12px;color:#555;margin-top:4px;">設備点検作業</div>
+              </div>
+              <div class="btn-mock btn-danger">削除</div>
+            </div>
+            <div style="font-size:12px;color:#555;margin-top:8px;">09:00 ～ 23:00</div>
+            <div style="display:flex;gap:24px;margin-top:10px;padding-top:10px;border-top:1px solid #e0e4ea;">
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:#888;">普通残業</div>
+                <div style="font-size:22px;font-weight:bold;color:#1a3a5c;">11.0</div>
+                <div style="font-size:11px;color:#888;">H</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:#888;">深夜残業</div>
+                <div style="font-size:22px;font-weight:bold;color:#1a3a5c;">0.5</div>
+                <div style="font-size:11px;color:#888;">H</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>削除する場合は「削除」ボタン</h3>
+          <p>間違えた場合は各カードの右上の「削除」ボタンで削除できます。</p>
+          <div class="point-box ok" style="margin-top:10px;">
+            <strong>複数の作業を登録できます</strong>同じ日に複数の作業（現場・社内）があっても、繰り返し追加することができます。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション5 ===== -->
+<div class="section" id="sec5">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <div class="section-title">Excelファイルをダウンロードする</div>
+  </div>
+
+  <div class="card">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>合計エリアの「Excelダウンロード」を押す</h3>
+          <p>1件以上登録されると合計エリアが表示されます。緑のボタンを押してください。</p>
+          <div style="margin-top:12px;">
+            <div class="btn-mock btn-success" style="display:inline-block;">Excelファイルをダウンロード</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>ファイルが自動保存される</h3>
+          <p>ファイル名は自動で付けられます。</p>
+          <div style="background:#f8f9fb;border:1px solid #e0e4ea;border-radius:8px;padding:12px;margin-top:8px;font-family:monospace;font-size:13px;color:#555;">
+            時間外作業報告書_20260405.xlsx
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Excelの中身を確認する</h3>
+          <p>Excelファイルには2種類のシートが含まれます。</p>
+
+          <div class="excel-preview" style="margin-top:12px;">
+            <div class="excel-header-bar">シート①：報告者名シート（例：山田 太郎）</div>
+            <div class="excel-body">
+              <div style="font-size:12px;font-weight:bold;margin-bottom:6px;">時間外作業報告書</div>
+              <div style="display:grid;grid-template-columns:80px 70px 80px 100px 150px 60px 60px 80px 80px;gap:1px;font-size:10px;">
+                <div class="excel-cell header">区分</div>
+                <div class="excel-cell header">平日/休日</div>
+                <div class="excel-cell header">日付</div>
+                <div class="excel-cell header">オーダー №</div>
+                <div class="excel-cell header">件名</div>
+                <div class="excel-cell header">開始</div>
+                <div class="excel-cell header">終了</div>
+                <div class="excel-cell header">普通残業(H)</div>
+                <div class="excel-cell header">深夜残業(H)</div>
+                <div class="excel-cell">現場作業</div>
+                <div class="excel-cell">休日</div>
+                <div class="excel-cell">2026/4/5</div>
+                <div class="excel-cell">A-001</div>
+                <div class="excel-cell">設備点検</div>
+                <div class="excel-cell">09:00</div>
+                <div class="excel-cell">23:00</div>
+                <div class="excel-cell blue">11.0</div>
+                <div class="excel-cell blue">0.5</div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell">合計</div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell"></div>
+                <div class="excel-cell blue"><strong>11.0</strong></div>
+                <div class="excel-cell blue"><strong>0.5</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="excel-preview" style="margin-top:12px;">
+            <div class="excel-header-bar">シート②：一覧シート（全員分まとめ）</div>
+            <div class="excel-body">
+              <div style="font-size:11px;color:#555;">全員の登録データを一覧で確認できます。</div>
+            </div>
+          </div>
+
+          <div class="point-box" style="margin-top:12px;">
+            <strong>報告者ごとにシートが分かれます</strong>複数の人のデータを登録した場合、自動的に別々のシートに分けて出力されます。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション6 ===== -->
+<div class="section" id="sec6">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <div class="section-title">よくある質問</div>
+  </div>
+
+  <div class="card">
+
+    <div class="faq-item">
+      <div class="faq-q">日をまたいで作業した場合はどう入力すればいいですか？</div>
+      <div class="faq-a">開始を「22:00」、終了を「02:00」のように入力してください。終了が開始より前の時間の場合、自動で翌日として計算します。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">休憩時間は自分で差し引く必要がありますか？</div>
+      <div class="faq-a">いいえ、不要です。アプリが自動で計算します。開始・終了時間をそのまま入力してください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">計算結果が0.5時間単位になるのはなぜですか？</div>
+      <div class="faq-a">時間外手当基準の規定に基づき、0.5時間（30分）単位に四捨五入して表示しています。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">同じ日に現場作業と社内作業の両方を入力できますか？</div>
+      <div class="faq-a">できます。区分を切り替えて2回登録してください。一覧では別々のカードとして表示されます。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">登録したデータはブラウザを閉じると消えますか？</div>
+      <div class="faq-a">はい、消えます。必ずExcelダウンロードをしてから閉じてください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">深夜作業手当（一律3,000円）は計算されますか？</div>
+      <div class="faq-a">現バージョンでは深夜作業手当の自動判定には対応していません。18:00〜6:00の時間帯で常用勤務5時間以上含まれる場合は、別途確認してください。</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="app-link">
+  <a href="index.html" target="_blank">アプリを開く →</a>
+</div>
+
+<footer>
+  時間外作業報告書アプリ｜使い方マニュアル<br>
+  <span style="opacity:0.6;font-size:11px;margin-top:4px;display:block;">時間外手当基準（原紙）に基づく自動計算</span>
+</footer>
+
+</body>
+</html>
