@@ -1,4 +1,4 @@
-# firstAPP 開発進捗状況
+# overtime 開発進捗状況
 
 ## 実装計画
 

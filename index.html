@@ -3,238 +3,138 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>時間外作業報告書</title>
+  <title>時間外・旅費精算書</title>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic Pro', sans-serif;
-      background: #f0f2f5;
-      color: #333;
-      min-height: 100vh;
-    }
-    header {
-      background: #1a3a5c;
-      color: white;
-      padding: 16px 20px;
-      text-align: center;
-    }
+    body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic Pro', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+    header { background: #1a3a5c; color: white; padding: 14px 20px; text-align: center; }
     header h1 { font-size: 20px; font-weight: bold; }
     header p { font-size: 12px; margin-top: 4px; opacity: 0.8; }
 
+    .tab-nav { display: flex; background: #132d46; border-bottom: 2px solid #0d1e2e; }
+    .tab-btn { padding: 12px 24px; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 14px; font-weight: bold; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab-btn:hover { color: rgba(255,255,255,0.9); }
+    .tab-btn.active { color: #fff; border-bottom-color: #4fa3e0; background: rgba(79,163,224,0.1); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     .container { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card h2 { font-size: 16px; color: #1a3a5c; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #1a3a5c; }
 
-    .card {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .card h2 {
-      font-size: 16px;
-      color: #1a3a5c;
-      margin-bottom: 16px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #1a3a5c;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group.full-width { grid-column: 1 / -1; }
-    label {
-      font-size: 12px;
-      font-weight: bold;
-      color: #555;
-    }
-    input[type="text"], input[type="date"], input[type="time"], select {
-      padding: 10px 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 15px;
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-      -webkit-appearance: none;
+    label { font-size: 12px; font-weight: bold; color: #555; }
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"], select {
+      padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px;
+      font-family: inherit; outline: none; transition: border-color 0.2s; width: 100%; -webkit-appearance: none;
     }
     input:focus, select:focus { border-color: #1a3a5c; box-shadow: 0 0 0 3px rgba(26,58,92,0.1); }
 
-    .radio-group { display: flex; gap: 12px; margin-top: 4px; }
+    .radio-group { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
     .radio-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-      flex: 1;
-      justify-content: center;
+      display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+      border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 13px;
+      transition: all 0.2s; flex: 1; justify-content: center; min-width: 0;
     }
     .radio-label input[type="radio"] { display: none; }
-    .radio-label.selected {
-      background: #1a3a5c;
-      color: white;
-      border-color: #1a3a5c;
-    }
+    .radio-label.selected { background: #1a3a5c; color: white; border-color: #1a3a5c; }
+    .radio-label.selected-green { background: #27ae60; color: white; border-color: #27ae60; }
+    .radio-label.selected-orange { background: #e67e22; color: white; border-color: #e67e22; }
 
-    .result-box {
-      background: #f8f9fb;
-      border: 1px solid #e0e4ea;
-      border-radius: 10px;
-      padding: 16px;
-      margin-top: 16px;
-    }
+    .result-box { background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 10px; padding: 16px; margin-top: 16px; }
     .result-box h3 { font-size: 13px; color: #666; margin-bottom: 12px; }
-    .result-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-    }
+    .result-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
     .result-row:last-child { border-bottom: none; }
     .result-label { font-size: 14px; color: #555; }
-    .result-value {
-      font-size: 22px;
-      font-weight: bold;
-      color: #1a3a5c;
-    }
+    .result-value { font-size: 22px; font-weight: bold; color: #1a3a5c; }
     .result-value span { font-size: 14px; font-weight: normal; margin-left: 2px; }
 
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.2s;
-      margin-top: 12px;
-    }
+    .btn { display: block; width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; transition: opacity 0.2s; margin-top: 12px; }
     .btn:active { opacity: 0.8; }
     .btn-primary { background: #1a3a5c; color: white; }
     .btn-success { background: #27ae60; color: white; }
+    .btn-info { background: #2980b9; color: white; }
     .btn-danger { background: #e74c3c; color: white; font-size: 13px; padding: 6px 12px; width: auto; border-radius: 6px; margin-top: 0; }
+    .btn-sm { padding: 8px 16px; font-size: 13px; margin-top: 0; }
 
     .entries-list { display: flex; flex-direction: column; gap: 12px; }
-    .entry-item {
-      background: #f8f9fb;
-      border: 1px solid #e0e4ea;
-      border-radius: 10px;
-      padding: 14px;
-    }
-    .entry-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 10px;
-    }
+    .entry-item { background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 10px; padding: 14px; }
+    .entry-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
     .entry-date { font-size: 13px; color: #888; }
     .entry-title { font-size: 15px; font-weight: bold; color: #1a3a5c; }
     .entry-details { font-size: 13px; color: #555; margin-top: 4px; }
-    .entry-hours {
-      display: flex;
-      gap: 16px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid #e0e4ea;
-    }
+    .entry-hours { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e4ea; flex-wrap: wrap; }
     .hour-item { text-align: center; }
     .hour-item .h-label { font-size: 11px; color: #888; }
     .hour-item .h-value { font-size: 18px; font-weight: bold; color: #1a3a5c; }
     .hour-item .h-unit { font-size: 11px; color: #888; }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .badge-weekday { background: #e8f4fd; color: #2980b9; }
-    .badge-holiday { background: #fdecea; color: #e74c3c; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .badge-regular { background: #e8f4fd; color: #2980b9; }
+    .badge-holiday-work { background: #fdecea; color: #e74c3c; }
+    .badge-paid-leave { background: #e8f8f0; color: #27ae60; }
+    .badge-comp-leave { background: #fef9e7; color: #f39c12; }
     .badge-onsite { background: #e8f8f0; color: #27ae60; }
     .badge-office { background: #fef9e7; color: #f39c12; }
 
-    .return-work-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      background: #e8f8f0;
-      border: 1px solid #b2dfcc;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      color: #1a5c3a;
-      font-weight: bold;
-      margin-top: 4px;
-    }
+    .return-work-toggle { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #e8f8f0; border: 1px solid #b2dfcc; border-radius: 8px; cursor: pointer; font-size: 14px; color: #1a5c3a; font-weight: bold; margin-top: 4px; }
     .return-work-toggle input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-    .return-work-fields {
-      margin-top: 10px;
-      padding: 14px;
-      background: #f0faf5;
-      border: 1px dashed #b2dfcc;
-      border-radius: 8px;
-    }
-    .return-work-fields .form-grid { margin-top: 0; }
+    .return-work-fields { margin-top: 10px; padding: 14px; background: #f0faf5; border: 1px dashed #b2dfcc; border-radius: 8px; }
 
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: #aaa;
-      font-size: 14px;
-    }
+    .expense-section { margin-top: 12px; padding: 14px; background: #faf7f0; border: 1px solid #e8d5b0; border-radius: 10px; }
+    .expense-section h4 { font-size: 13px; font-weight: bold; color: #7a5c00; margin-bottom: 10px; }
 
-    .summary-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .summary-item.highlight {
-      border-color: #e67e22;
-    }
+    .empty-state { text-align: center; padding: 40px 20px; color: #aaa; font-size: 14px; }
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .summary-item { background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 10px; padding: 14px; text-align: center; }
+    .summary-item.highlight { border-color: #e67e22; }
     .summary-item.highlight .s-value { color: #e67e22; }
-    .summary-item {
-      background: #f8f9fb;
-      border: 1px solid #e0e4ea;
-      border-radius: 10px;
-      padding: 14px;
-      text-align: center;
-    }
     .summary-item .s-label { font-size: 12px; color: #888; margin-bottom: 4px; }
     .summary-item .s-value { font-size: 24px; font-weight: bold; color: #1a3a5c; }
     .summary-item .s-unit { font-size: 13px; color: #888; }
+
+    .expense-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    .expense-table th { background: #1a3a5c; color: white; padding: 8px; text-align: left; }
+    .expense-table td { padding: 8px; border-bottom: 1px solid #e0e4ea; vertical-align: top; }
+    .expense-table tr:last-child td { border-bottom: none; }
+    .expense-table tr:hover td { background: #f8f9fb; }
+    .expense-total-row td { font-weight: bold; background: #f0f4f8; }
+
+    .jun-filter { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .jun-filter label { font-size: 13px; color: #555; }
+    .jun-filter select, .jun-filter input { width: auto; font-size: 14px; padding: 6px 10px; }
+
+    .settings-form { max-width: 500px; }
+    .settings-form .form-group { margin-bottom: 16px; }
+    .settings-hint { font-size: 12px; color: #888; margin-top: 4px; }
 
     @media (max-width: 600px) {
       .form-grid { grid-template-columns: 1fr; }
       .form-group.full-width { grid-column: 1; }
       .summary-grid { grid-template-columns: 1fr 1fr; }
+      .tab-btn { padding: 10px 14px; font-size: 13px; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>時間外作業報告書</h1>
+  <h1>時間外・旅費精算書</h1>
   <p>提出期限：各旬報〆日から３営業日以内　→　直近上司→所属部長→事務</p>
 </header>
 
+<div class="tab-nav">
+  <div class="tab-btn active" onclick="switchTab('overtime')">残業報告書</div>
+  <div class="tab-btn" onclick="switchTab('expense')">旬報</div>
+  <div class="tab-btn" onclick="switchTab('settings')">設定</div>
+</div>
+
+<!-- ===== 残業報告書タブ ===== -->
+<div id="tab-overtime" class="tab-content active">
 <div class="container">
 
-  <!-- 入力フォーム -->
   <div class="card">
     <h2>作業内容入力</h2>
     <div class="form-grid">
@@ -247,14 +147,35 @@
         <input type="text" id="inputName" placeholder="氏名を入力">
       </div>
       <div class="form-group">
+        <label>社員番号</label>
+        <input type="text" id="inputEmpNo" placeholder="社員番号">
+      </div>
+      <div class="form-group">
         <label>オーダー №</label>
         <input type="text" id="inputOrder" placeholder="オーダー番号">
       </div>
-      <div class="form-group">
-        <label>件名</label>
+      <div class="form-group full-width">
+        <label>件名（工事名）</label>
         <input type="text" id="inputSubject" placeholder="作業件名">
       </div>
-      <div class="form-group">
+      <div class="form-group full-width">
+        <label>勤務区分</label>
+        <div class="radio-group">
+          <label class="radio-label selected" id="label-regular">
+            <input type="radio" name="workCategory" value="regular" checked> 常用
+          </label>
+          <label class="radio-label" id="label-holiday_work">
+            <input type="radio" name="workCategory" value="holiday_work"> 休出
+          </label>
+          <label class="radio-label" id="label-paid_leave">
+            <input type="radio" name="workCategory" value="paid_leave"> 有給
+          </label>
+          <label class="radio-label" id="label-comp_leave">
+            <input type="radio" name="workCategory" value="comp_leave"> 代休
+          </label>
+        </div>
+      </div>
+      <div class="form-group" id="workTypeGroup">
         <label>区分</label>
         <div class="radio-group">
           <label class="radio-label selected" id="label-onsite">
@@ -265,29 +186,18 @@
           </label>
         </div>
       </div>
-      <div class="form-group">
-        <label>平日 / 休日</label>
-        <div class="radio-group">
-          <label class="radio-label selected" id="label-weekday">
-            <input type="radio" name="dayType" value="weekday" checked> 平日
-          </label>
-          <label class="radio-label" id="label-holiday">
-            <input type="radio" name="dayType" value="holiday"> 休日
-          </label>
-        </div>
-      </div>
-      <div class="form-group">
+      <div class="form-group" id="startGroup">
         <label>作業開始時間</label>
-        <input type="time" id="inputStart" value="09:00">
+        <select id="inputStart"></select>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="endGroup">
         <label>作業終了時間</label>
-        <input type="time" id="inputEnd" value="21:00">
+        <select id="inputEnd"></select>
       </div>
     </div>
 
-    <!-- 帰社後作業（現場作業時のみ表示） -->
-    <div id="returnWorkSection" style="display:none; margin-top:12px;">
+    <!-- 帰社後作業（現場作業時のみ） -->
+    <div id="returnWorkSection" style="margin-top:12px;">
       <label class="return-work-toggle">
         <input type="checkbox" id="hasReturnWork"> 帰社後にも作業あり
       </label>
@@ -303,50 +213,98 @@
               <input type="text" id="inputReturnSubject" placeholder="作業件名">
             </div>
             <div class="form-group">
-              <label>帰社後 作業開始時間</label>
-              <input type="time" id="inputReturnStart" value="20:00">
+              <label>帰社後 開始時間</label>
+              <select id="inputReturnStart"></select>
             </div>
             <div class="form-group">
-              <label>帰社後 作業終了時間</label>
-              <input type="time" id="inputReturnEnd" value="22:00">
+              <label>帰社後 終了時間</label>
+              <select id="inputReturnEnd"></select>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- リアルタイム計算結果 -->
-    <div class="result-box">
-      <h3>計算結果（時間外手当）</h3>
-      <!-- 現場作業分 -->
-      <div style="font-size:12px;font-weight:bold;color:#27ae60;margin-bottom:4px;" id="resultMainLabel">現場作業</div>
-      <div class="result-row">
-        <div class="result-label">普通残業</div>
-        <div class="result-value" id="resultRegular">－<span>H</span></div>
+    <!-- 旬報用フィールド -->
+    <div class="expense-section" style="margin-top:12px;">
+      <h4>旅費・交通費（旬報）</h4>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>日当</label>
+          <select id="inputDailyAllowance">
+            <option value="0">0円（なし）</option>
+            <option value="150">150円</option>
+            <option value="300">300円</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>宿泊費（円）</label>
+          <input type="number" id="inputAccommodation" placeholder="0" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label>交通機関</label>
+          <input type="text" id="inputTransportType" placeholder="JR・私鉄 等">
+        </div>
+        <div class="form-group">
+          <label>区間</label>
+          <input type="text" id="inputTransportRoute" placeholder="○○→△△">
+        </div>
+        <div class="form-group">
+          <label>交通費（円）</label>
+          <input type="number" id="inputTransportAmount" placeholder="0" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label>往復</label>
+          <div class="radio-group">
+            <label class="radio-label selected" id="label-oneway">
+              <input type="radio" name="tripType" value="oneway" checked> 片道
+            </label>
+            <label class="radio-label" id="label-roundtrip">
+              <input type="radio" name="tripType" value="roundtrip"> 往復
+            </label>
+          </div>
+        </div>
+        <div class="form-group full-width">
+          <label>備考</label>
+          <input type="text" id="inputRemarks" placeholder="備考（任意）">
+        </div>
       </div>
-      <div class="result-row">
-        <div class="result-label">深夜残業</div>
-        <div class="result-value" id="resultLateNight">－<span>H</span></div>
-      </div>
-      <!-- 深夜作業手当（18時〜翌6時に常用勤務5h以上の場合） -->
-      <div id="resultLateNightAllowanceRow" class="result-row" style="display:none;">
-        <div class="result-label" style="color:#e67e22;font-weight:bold;">深夜作業手当</div>
-        <div class="result-value" style="color:#e67e22;">3,000<span>円</span></div>
-      </div>
-      <div id="resultNote" style="font-size:12px;color:#888;margin-top:4px;margin-bottom:8px;"></div>
-      <!-- 帰社後作業分（帰社後あり時のみ表示） -->
-      <div id="resultReturnSection" style="display:none; border-top:1px solid #dde; padding-top:10px; margin-top:4px;">
-        <div style="font-size:12px;font-weight:bold;color:#1a3a5c;margin-bottom:4px;">帰社後作業</div>
+    </div>
+
+    <!-- 残業計算プレビュー -->
+    <div id="overtimePreview">
+      <div class="result-box">
+        <h3>計算結果（時間外手当）</h3>
+        <div style="font-size:12px;font-weight:bold;color:#27ae60;margin-bottom:4px;" id="resultMainLabel">現場作業</div>
         <div class="result-row">
           <div class="result-label">普通残業</div>
-          <div class="result-value" id="resultReturnRegular">－<span>H</span></div>
+          <div class="result-value" id="resultRegular">－<span>H</span></div>
         </div>
         <div class="result-row">
           <div class="result-label">深夜残業</div>
-          <div class="result-value" id="resultReturnLateNight">－<span>H</span></div>
+          <div class="result-value" id="resultLateNight">－<span>H</span></div>
         </div>
-        <div style="font-size:12px;color:#888;margin-top:4px;">帰社後：全時間が残業対象</div>
+        <div id="resultLateNightAllowanceRow" class="result-row" style="display:none;">
+          <div class="result-label" style="color:#e67e22;font-weight:bold;">深夜作業手当</div>
+          <div class="result-value" style="color:#e67e22;">3,000<span>円</span></div>
+        </div>
+        <div id="resultNote" style="font-size:12px;color:#888;margin-top:4px;margin-bottom:8px;"></div>
+        <div id="resultReturnSection" style="display:none; border-top:1px solid #dde; padding-top:10px; margin-top:4px;">
+          <div style="font-size:12px;font-weight:bold;color:#1a3a5c;margin-bottom:4px;">帰社後作業</div>
+          <div class="result-row">
+            <div class="result-label">普通残業</div>
+            <div class="result-value" id="resultReturnRegular">－<span>H</span></div>
+          </div>
+          <div class="result-row">
+            <div class="result-label">深夜残業</div>
+            <div class="result-value" id="resultReturnLateNight">－<span>H</span></div>
+          </div>
+          <div style="font-size:12px;color:#888;margin-top:4px;">帰社後：全時間が残業対象</div>
+        </div>
       </div>
+    </div>
+    <div id="noOvertimeNote" style="display:none; margin-top:16px; padding:12px; background:#f0f8f0; border:1px solid #b2dfcc; border-radius:8px; font-size:13px; color:#27ae60; text-align:center;">
+      有給・代休は残業計算の対象外です
     </div>
 
     <button class="btn btn-primary" onclick="addEntry()">この内容を追加</button>
@@ -377,7 +335,7 @@
         <div class="s-unit">円</div>
       </div>
     </div>
-    <button class="btn btn-success" onclick="exportToExcel()">Excelファイルをダウンロード</button>
+    <button class="btn btn-success" onclick="exportOvertimeExcel()">残業報告書 Excel ダウンロード</button>
   </div>
 
   <!-- 登録済みリスト -->
@@ -389,153 +347,248 @@
   </div>
 
 </div>
+</div>
+
+<!-- ===== 旬報タブ ===== -->
+<div id="tab-expense" class="tab-content">
+<div class="container">
+
+  <div class="card">
+    <h2>旬報（旅費交通費等精算書）</h2>
+    <div class="jun-filter">
+      <label>対象年月:</label>
+      <input type="month" id="junMonth">
+      <label>旬:</label>
+      <select id="junSelect">
+        <option value="all">全期間</option>
+        <option value="upper">上旬（1〜10日）</option>
+        <option value="mid">中旬（11〜20日）</option>
+        <option value="lower">下旬（21〜末日）</option>
+      </select>
+      <button class="btn btn-info btn-sm" style="width:auto;" onclick="renderExpenseTab()">表示</button>
+    </div>
+    <div id="expenseContent">
+      <div class="empty-state">対象年月・旬を選択して「表示」を押してください</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ===== 設定タブ ===== -->
+<div id="tab-settings" class="tab-content">
+<div class="container">
+
+  <div class="card">
+    <h2>設定</h2>
+    <div class="settings-form">
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>氏名（デフォルト）</label>
+        <input type="text" id="settingName" placeholder="氏名">
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>社員番号</label>
+        <input type="text" id="settingEmpNo" placeholder="社員番号">
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>所属（部署）</label>
+        <input type="text" id="settingDept" placeholder="所属部署">
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>勤務原価単価（円/日）</label>
+        <input type="number" id="settingCostRate" placeholder="例: 15000" min="0" step="1">
+        <div class="settings-hint">旬報のオーダー別集計に使用します</div>
+      </div>
+      <button class="btn btn-primary" style="width:auto; padding:12px 32px;" onclick="saveSettings()">保存</button>
+      <div id="settingsSaved" style="display:none; margin-top:8px; color:#27ae60; font-size:13px;">✓ 保存しました</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>データ管理</h2>
+    <p style="font-size:13px; color:#666; margin-bottom:12px;">登録済みデータはブラウザのLocalStorageに保存されています。</p>
+    <button class="btn btn-danger" style="width:auto; padding:10px 20px;" onclick="clearAllData()">全データを削除</button>
+  </div>
+
+</div>
+</div>
 
 <script>
 // ===== 計算ロジック =====
 
-// 休憩時間（分単位、1日 = 1440分）
-// 毎日繰り返す休憩パターン
 const DAILY_BREAKS = [
-  [720, 780],    // 12:00-13:00 (1.0h)
-  [900, 930],    // 15:00-15:30 (0.5h)
-  [1080, 1110],  // 18:00-18:30 (0.5h)
-  [1320, 1350],  // 22:00-22:30 (0.5h)
-  [120, 180],    // 02:00-03:00 (1.0h)
-  [360, 390],    // 06:00-06:30 (0.5h)
-  [510, 540],    // 08:30-09:00 (0.5h)
+  [720, 780], [900, 930], [1080, 1110], [1320, 1350],
+  [120, 180], [360, 390], [510, 540],
 ];
 
-// 指定期間の休憩リストを生成（2日分）
 function getBreaks() {
   const breaks = [];
-  for (let day = 0; day < 3; day++) {
-    for (const [s, e] of DAILY_BREAKS) {
+  for (let day = 0; day < 3; day++)
+    for (const [s, e] of DAILY_BREAKS)
       breaks.push([s + day * 1440, e + day * 1440]);
-    }
-  }
   return breaks;
 }
 
-// 区間 [a, b] 内の休憩時間合計（分）
 function calcBreakMinutes(a, b, breaks) {
   let total = 0;
   for (const [s, e] of breaks) {
-    const os = Math.max(a, s);
-    const oe = Math.min(b, e);
+    const os = Math.max(a, s), oe = Math.min(b, e);
     if (oe > os) total += oe - os;
   }
   return total;
 }
 
-// 区間 [a, b] と [c, d] の重複部分の実働時間（休憩除く）
 function calcEffectiveMinutes(a, b, c, d, breaks) {
-  const s = Math.max(a, c);
-  const e = Math.min(b, d);
+  const s = Math.max(a, c), e = Math.min(b, d);
   if (e <= s) return 0;
   return Math.max(0, e - s - calcBreakMinutes(s, e, breaks));
 }
 
-// 時刻文字列 "HH:MM" → 分
 function timeToMin(str) {
   if (!str) return 0;
   const [h, m] = str.split(':').map(Number);
   return h * 60 + (m || 0);
 }
 
-// 分 → 0.5h 単位で丸め
-function roundToHalf(minutes) {
-  return Math.round(minutes / 30) * 0.5;
-}
+function roundToHalf(minutes) { return Math.round(minutes / 30) * 0.5; }
 
-// メイン計算関数
 function calcOvertime(startStr, endStr, isHoliday) {
   let startMin = timeToMin(startStr);
   let endMin = timeToMin(endStr);
-
-  if (endMin === 0) endMin = 1440; // 00:00 → 翌24:00
-  if (endMin <= startMin) endMin += 1440; // 翌日
-
+  if (endMin === 0) endMin = 1440;
+  if (endMin <= startMin) endMin += 1440;
   const breaks = getBreaks();
-
-  let overtimeStart;
-  if (isHoliday) {
-    // 休日：最初から全て残業
-    overtimeStart = startMin;
-  } else {
-    // 平日：常用勤務開始から9時間30分後が残業開始（規程より）
-    overtimeStart = startMin + 570; // 570分 = 9時間30分
-  }
-
-  if (endMin <= overtimeStart) {
-    return { regular: 0, lateNight: 0, overtimeStart };
-  }
-
-  let regularMin = 0;
-  let lateNightMin = 0;
-
-  // 3日分の普通残業帯(6:00-22:00)と深夜残業帯(22:00-翌6:00)を計算
+  const overtimeStart = isHoliday ? startMin : startMin + 570;
+  if (endMin <= overtimeStart) return { regular: 0, lateNight: 0, overtimeStart };
+  let regularMin = 0, lateNightMin = 0;
   for (let day = 0; day < 3; day++) {
     const base = day * 1440;
-    // 普通残業帯: 6:00 - 22:00
     regularMin += calcEffectiveMinutes(overtimeStart, endMin, 360 + base, 1320 + base, breaks);
-    // 深夜残業帯: 22:00 - 翌6:00
     lateNightMin += calcEffectiveMinutes(overtimeStart, endMin, 1320 + base, 1800 + base, breaks);
   }
-
-  return {
-    regular: roundToHalf(regularMin),
-    lateNight: roundToHalf(lateNightMin),
-    overtimeStart
-  };
+  return { regular: roundToHalf(regularMin), lateNight: roundToHalf(lateNightMin), overtimeStart };
 }
 
-// 深夜作業手当の計算
-// 深夜作業時間帯（18:00〜翌6:00）内に常用勤務が5時間以上含まれる場合、一律3,000円
-// ※深夜作業手当と時間外作業手当は同一時間帯で重複しない（規程より）
 function calcLateNightWorkAllowance(startStr, isHoliday) {
-  if (isHoliday) return 0; // 休日は全て残業扱いのため適用なし
-
+  if (isHoliday) return 0;
   const startMin = timeToMin(startStr);
-  const overtimeStart = startMin + 570; // 9時間30分後 = 常用勤務終了
+  const overtimeStart = startMin + 570;
   const breaks = getBreaks();
-
-  // 常用勤務時間帯（startMin〜overtimeStart）のうち深夜作業時間帯（18:00〜翌6:00）に含まれる実働分
   let lateWorkMin = 0;
   for (let day = 0; day < 3; day++) {
     const base = day * 1440;
-    // 深夜作業時間帯: 18:00(1080) 〜 翌6:00(1800)
     lateWorkMin += calcEffectiveMinutes(startMin, overtimeStart, 1080 + base, 1800 + base, breaks);
   }
-
-  return lateWorkMin >= 300 ? 3000 : 0; // 5時間(300分)以上で3,000円
+  return lateWorkMin >= 300 ? 3000 : 0;
 }
 
-// 分 → "HH:MM" 表示
 function minToTimeStr(min) {
-  const h = Math.floor(min / 60) % 24;
-  const m = min % 60;
+  const h = Math.floor(min / 60) % 24, m = min % 60;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 
-// ===== UI ロジック =====
-let entries = [];
+// workCategory helpers
+const CAT_LABELS = { regular: '常用', holiday_work: '休出', paid_leave: '有給', comp_leave: '代休' };
+const CAT_BADGE  = { regular: 'badge-regular', holiday_work: 'badge-holiday-work', paid_leave: 'badge-paid-leave', comp_leave: 'badge-comp-leave' };
 
-// ラジオボタンのトグルUI
-document.querySelectorAll('input[type="radio"]').forEach(radio => {
-  radio.addEventListener('change', function() {
-    const name = this.name;
-    document.querySelectorAll(`input[name="${name}"]`).forEach(r => {
-      const labelId = `label-${r.value === 'weekday' ? 'weekday' : r.value === 'holiday' ? 'holiday' : r.value === 'onsite' ? 'onsite' : 'office'}`;
-      const lbl = document.getElementById(labelId);
-      if (lbl) lbl.classList.toggle('selected', r.checked);
+function isHolidayCategory(cat) { return cat === 'holiday_work' || cat === 'comp_leave'; }
+function hasOvertimeCategory(cat) { return cat === 'regular' || cat === 'holiday_work'; }
+
+// ===== 設定 =====
+const SETTINGS_KEY = 'overtime_settings';
+let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+
+function saveSettings() {
+  settings = {
+    name: document.getElementById('settingName').value,
+    empNo: document.getElementById('settingEmpNo').value,
+    dept: document.getElementById('settingDept').value,
+    costRate: parseInt(document.getElementById('settingCostRate').value) || 0,
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  const msg = document.getElementById('settingsSaved');
+  msg.style.display = 'block';
+  setTimeout(() => msg.style.display = 'none', 2000);
+}
+
+function loadSettingsToForm() {
+  document.getElementById('settingName').value = settings.name || '';
+  document.getElementById('settingEmpNo').value = settings.empNo || '';
+  document.getElementById('settingDept').value = settings.dept || '';
+  document.getElementById('settingCostRate').value = settings.costRate || '';
+}
+
+// ===== エントリー管理 =====
+const STORAGE_KEY = 'overtime_entries';
+let entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+function saveEntries() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+
+// ===== タブ切替 =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  const idx = { overtime: 0, expense: 1, settings: 2 }[name];
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  if (name === 'settings') loadSettingsToForm();
+  if (name === 'expense') {
+    const today = new Date();
+    const ym = document.getElementById('junMonth');
+    if (!ym.value) ym.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  }
+}
+
+// ===== 30分刻み時刻 =====
+function buildTimeSelect(id, defaultVal) {
+  const sel = document.getElementById(id);
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      if (val === defaultVal) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  sel.addEventListener('change', updatePreview);
+}
+buildTimeSelect('inputStart', '09:00');
+buildTimeSelect('inputEnd', '21:00');
+buildTimeSelect('inputReturnStart', '20:00');
+buildTimeSelect('inputReturnEnd', '22:00');
+
+// 今日の日付
+const _today = new Date();
+document.getElementById('inputDate').value = `${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
+
+// 設定から氏名・社員番号を自動入力
+if (settings.name) document.getElementById('inputName').value = settings.name;
+if (settings.empNo) document.getElementById('inputEmpNo').value = settings.empNo;
+
+// ===== ラジオボタン UI =====
+document.querySelectorAll('input[name="workCategory"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.querySelectorAll('input[name="workCategory"]').forEach(x => {
+      document.getElementById(`label-${x.value}`).classList.remove('selected');
     });
-    // 現場作業のときのみ帰社後作業欄を表示
-    const workType = document.querySelector('input[name="workType"]:checked').value;
-    const returnSection = document.getElementById('returnWorkSection');
-    if (workType === 'onsite') {
-      returnSection.style.display = 'block';
-    } else {
-      returnSection.style.display = 'none';
+    document.getElementById(`label-${this.value}`).classList.add('selected');
+    const isLeave = this.value === 'paid_leave' || this.value === 'comp_leave';
+    document.getElementById('overtimePreview').style.display = isLeave ? 'none' : 'block';
+    document.getElementById('noOvertimeNote').style.display = isLeave ? 'block' : 'none';
+    updatePreview();
+  });
+});
+
+document.querySelectorAll('input[name="workType"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.querySelectorAll('input[name="workType"]').forEach(x => {
+      document.getElementById(`label-${x.value}`).classList.remove('selected');
+    });
+    document.getElementById(`label-${this.value}`).classList.add('selected');
+    const isOnsite = this.value === 'onsite';
+    document.getElementById('returnWorkSection').style.display = isOnsite ? 'block' : 'none';
+    if (!isOnsite) {
       document.getElementById('hasReturnWork').checked = false;
       document.getElementById('returnWorkFields').style.display = 'none';
     }
@@ -543,30 +596,33 @@ document.querySelectorAll('input[type="radio"]').forEach(radio => {
   });
 });
 
-// 帰社後作業チェックボックス
+document.querySelectorAll('input[name="tripType"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.querySelectorAll('input[name="tripType"]').forEach(x => {
+      document.getElementById(`label-${x.value}`).classList.remove('selected');
+    });
+    document.getElementById(`label-${this.value}`).classList.add('selected');
+  });
+});
+
 document.getElementById('hasReturnWork').addEventListener('change', function() {
   document.getElementById('returnWorkFields').style.display = this.checked ? 'block' : 'none';
   updatePreview();
 });
 
-// 時刻入力時にリアルタイム計算
-['inputStart', 'inputEnd', 'inputReturnStart', 'inputReturnEnd'].forEach(id => {
-  document.getElementById(id).addEventListener('change', updatePreview);
-});
-
-// 今日の日付をデフォルト設定（ローカル時刻で正確に設定）
-const _today = new Date();
-document.getElementById('inputDate').value = `${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
-
+// ===== フォーム値取得 =====
 function getFormValues() {
   const hasReturn = document.getElementById('hasReturnWork').checked;
+  const transportAmount = parseInt(document.getElementById('inputTransportAmount').value) || 0;
+  const isRoundTrip = document.querySelector('input[name="tripType"]:checked').value === 'roundtrip';
   return {
     date: document.getElementById('inputDate').value,
     name: document.getElementById('inputName').value,
+    empNo: document.getElementById('inputEmpNo').value,
     order: document.getElementById('inputOrder').value,
     subject: document.getElementById('inputSubject').value,
+    workCategory: document.querySelector('input[name="workCategory"]:checked').value,
     workType: document.querySelector('input[name="workType"]:checked').value,
-    dayType: document.querySelector('input[name="dayType"]:checked').value,
     start: document.getElementById('inputStart').value,
     end: document.getElementById('inputEnd').value,
     hasReturnWork: hasReturn,
@@ -574,21 +630,30 @@ function getFormValues() {
     returnSubject: hasReturn ? document.getElementById('inputReturnSubject').value : '',
     returnStart: hasReturn ? document.getElementById('inputReturnStart').value : '',
     returnEnd: hasReturn ? document.getElementById('inputReturnEnd').value : '',
+    // 旬報フィールド
+    dailyAllowance: parseInt(document.getElementById('inputDailyAllowance').value) || 0,
+    accommodation: parseInt(document.getElementById('inputAccommodation').value) || 0,
+    transportType: document.getElementById('inputTransportType').value,
+    transportRoute: document.getElementById('inputTransportRoute').value,
+    transportAmount: isRoundTrip ? transportAmount * 2 : transportAmount,
+    transportRoundTrip: isRoundTrip,
+    remarks: document.getElementById('inputRemarks').value,
   };
 }
 
 function calcCombinedOvertime(v) {
-  const isHoliday = v.dayType === 'holiday';
+  if (!hasOvertimeCategory(v.workCategory)) {
+    return { mainRegular: 0, mainLateNight: 0, returnRegular: 0, returnLateNight: 0, regular: 0, lateNight: 0, lateNightAllowance: 0, overtimeStart: 0 };
+  }
+  const isHoliday = isHolidayCategory(v.workCategory);
   const main = calcOvertime(v.start, v.end, isHoliday);
   let returnResult = null;
   if (v.hasReturnWork && v.returnStart && v.returnEnd) {
-    // 帰社後作業は全て残業（現場作業後に帰社して継続）
     const ret = calcOvertime(v.returnStart, v.returnEnd, true);
     returnResult = { regular: ret.regular, lateNight: ret.lateNight };
   }
   const totalRegular = Math.round((main.regular + (returnResult ? returnResult.regular : 0)) * 10) / 10;
   const totalLateNight = Math.round((main.lateNight + (returnResult ? returnResult.lateNight : 0)) * 10) / 10;
-  const lateNightAllowance = calcLateNightWorkAllowance(v.start, isHoliday);
   return {
     mainRegular: main.regular,
     mainLateNight: main.lateNight,
@@ -596,37 +661,25 @@ function calcCombinedOvertime(v) {
     returnLateNight: returnResult ? returnResult.lateNight : 0,
     regular: totalRegular,
     lateNight: totalLateNight,
-    lateNightAllowance,
+    lateNightAllowance: calcLateNightWorkAllowance(v.start, isHoliday),
     overtimeStart: main.overtimeStart,
   };
 }
 
+// ===== プレビュー更新 =====
 function updatePreview() {
   const v = getFormValues();
   if (!v.start || !v.end) return;
+  if (!hasOvertimeCategory(v.workCategory)) return;
 
-  const isHoliday = v.dayType === 'holiday';
+  const isHoliday = isHolidayCategory(v.workCategory);
   const result = calcCombinedOvertime(v);
-
-  // 現場作業ラベル（社内作業時は「作業」と表示）
-  const mainLabel = v.workType === 'onsite' ? '現場作業' : '作業';
-  document.getElementById('resultMainLabel').textContent = mainLabel;
-
+  document.getElementById('resultMainLabel').textContent = v.workType === 'onsite' ? '現場作業' : '作業';
   document.getElementById('resultRegular').innerHTML = `${result.mainRegular}<span>H</span>`;
   document.getElementById('resultLateNight').innerHTML = `${result.mainLateNight}<span>H</span>`;
-
-  // 深夜作業手当
-  const allowanceRow = document.getElementById('resultLateNightAllowanceRow');
-  allowanceRow.style.display = result.lateNightAllowance > 0 ? 'flex' : 'none';
-
+  document.getElementById('resultLateNightAllowanceRow').style.display = result.lateNightAllowance > 0 ? 'flex' : 'none';
   const rNote = document.getElementById('resultNote');
-  if (!isHoliday) {
-    rNote.textContent = `残業開始時間: ${minToTimeStr(result.overtimeStart)}（勤務開始から9時間30分後）`;
-  } else {
-    rNote.textContent = `休日：全時間が残業対象`;
-  }
-
-  // 帰社後作業セクション
+  rNote.textContent = isHoliday ? '休出：全時間が残業対象' : `残業開始時間: ${minToTimeStr(result.overtimeStart)}（勤務開始から9時間30分後）`;
   const retSection = document.getElementById('resultReturnSection');
   if (v.hasReturnWork && v.returnStart && v.returnEnd) {
     retSection.style.display = 'block';
@@ -637,100 +690,94 @@ function updatePreview() {
   }
 }
 
-// 初期表示：現場作業がデフォルト選択なので帰社後作業欄を表示
+// 初期表示
 document.getElementById('returnWorkSection').style.display = 'block';
-
-// 初期プレビュー
 updatePreview();
+renderEntries();
+updateSummary();
 
+// ===== エントリー追加 =====
 function addEntry() {
   const v = getFormValues();
   if (!v.date) { alert('日付を入力してください'); return; }
   if (!v.name) { alert('報告者氏名を入力してください'); return; }
-  if (!v.start || !v.end) { alert('作業時間を入力してください'); return; }
+  if (hasOvertimeCategory(v.workCategory) && (!v.start || !v.end)) { alert('作業時間を入力してください'); return; }
 
   const result = calcCombinedOvertime(v);
-
   entries.push({
     id: Date.now(),
-    date: v.date,
-    name: v.name,
-    order: v.order,
-    subject: v.subject,
-    workType: v.workType,
-    dayType: v.dayType,
-    start: v.start,
-    end: v.end,
-    hasReturnWork: v.hasReturnWork,
-    returnOrder: v.returnOrder,
-    returnSubject: v.returnSubject,
-    returnStart: v.returnStart,
-    returnEnd: v.returnEnd,
-    mainRegular: result.mainRegular,
-    mainLateNight: result.mainLateNight,
-    returnRegular: result.returnRegular,
-    returnLateNight: result.returnLateNight,
-    regular: result.regular,
-    lateNight: result.lateNight,
-    lateNightAllowance: result.lateNightAllowance,
+    date: v.date, name: v.name, empNo: v.empNo, order: v.order, subject: v.subject,
+    workCategory: v.workCategory, workType: v.workType,
+    start: v.start, end: v.end,
+    hasReturnWork: v.hasReturnWork, returnOrder: v.returnOrder, returnSubject: v.returnSubject,
+    returnStart: v.returnStart, returnEnd: v.returnEnd,
+    mainRegular: result.mainRegular, mainLateNight: result.mainLateNight,
+    returnRegular: result.returnRegular, returnLateNight: result.returnLateNight,
+    regular: result.regular, lateNight: result.lateNight, lateNightAllowance: result.lateNightAllowance,
+    // 旬報フィールド
+    dailyAllowance: v.dailyAllowance, accommodation: v.accommodation,
+    transportType: v.transportType, transportRoute: v.transportRoute,
+    transportAmount: v.transportAmount, transportRoundTrip: v.transportRoundTrip,
+    remarks: v.remarks,
   });
-
+  saveEntries();
   renderEntries();
   updateSummary();
-
-  // フォームリセット（日付・名前は維持）
-  document.getElementById('inputOrder').value = '';
-  document.getElementById('inputSubject').value = '';
-  document.getElementById('inputReturnOrder').value = '';
-  document.getElementById('inputReturnSubject').value = '';
+  // リセット（日付・名前は維持）
+  ['inputOrder','inputSubject','inputReturnOrder','inputReturnSubject',
+   'inputTransportType','inputTransportRoute','inputTransportAmount',
+   'inputAccommodation','inputRemarks'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('inputDailyAllowance').value = '0';
 }
 
 function deleteEntry(id) {
   entries = entries.filter(e => e.id !== id);
-  renderEntries();
-  updateSummary();
+  saveEntries(); renderEntries(); updateSummary();
 }
 
+function clearAllData() {
+  if (!confirm('全データを削除してよいですか？')) return;
+  entries = [];
+  saveEntries(); renderEntries(); updateSummary();
+}
+
+// ===== エントリー一覧表示 =====
 function renderEntries() {
   const list = document.getElementById('entriesList');
   if (entries.length === 0) {
     list.innerHTML = '<div class="empty-state">まだ登録がありません<br>上のフォームから作業を追加してください</div>';
     return;
   }
-
-  list.innerHTML = entries.map(e => `
+  const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
+  list.innerHTML = sorted.map(e => {
+    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
+    const expenseTotal = (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0);
+    return `
     <div class="entry-item">
       <div class="entry-header">
         <div>
           <div class="entry-date">${formatDate(e.date)}</div>
-          <div class="entry-title">${e.name}</div>
+          <div class="entry-title">${e.name}${e.empNo ? `　<span style="font-size:13px;color:#666;">（${e.empNo}）</span>` : ''}</div>
           <div class="entry-details" style="margin-top:6px;">
-            <span class="badge ${e.workType === 'onsite' ? 'badge-onsite' : 'badge-office'}">
+            <span class="badge ${CAT_BADGE[cat]}">${CAT_LABELS[cat] || cat}</span>
+            <span class="badge ${e.workType === 'onsite' ? 'badge-onsite' : 'badge-office'}" style="margin-left:4px;">
               ${e.workType === 'onsite' ? '現場作業' : '社内作業'}
-            </span>
-            <span class="badge ${e.dayType === 'weekday' ? 'badge-weekday' : 'badge-holiday'}" style="margin-left:4px;">
-              ${e.dayType === 'weekday' ? '平日' : '休日'}
             </span>
           </div>
           ${e.subject ? `<div class="entry-details">${e.subject}</div>` : ''}
         </div>
         <button class="btn btn-danger" onclick="deleteEntry(${e.id})">削除</button>
       </div>
-      <!-- 現場作業 時間・残業 -->
+      ${hasOvertimeCategory(cat) ? `
       <div style="margin-bottom:${e.hasReturnWork ? '8px' : '0'};">
         <div class="entry-details">${e.start} ～ ${e.end}</div>
         ${e.order ? `<div class="entry-details" style="color:#888;">No. ${e.order}</div>` : ''}
         <div class="entry-hours">
-          <div class="hour-item">
-            <div class="h-label">普通残業</div>
-            <div class="h-value">${e.mainRegular}</div>
-            <div class="h-unit">H</div>
-          </div>
-          <div class="hour-item">
-            <div class="h-label">深夜残業</div>
-            <div class="h-value">${e.mainLateNight}</div>
-            <div class="h-unit">H</div>
-          </div>
+          <div class="hour-item"><div class="h-label">普通残業</div><div class="h-value">${e.mainRegular}</div><div class="h-unit">H</div></div>
+          <div class="hour-item"><div class="h-label">深夜残業</div><div class="h-value">${e.mainLateNight}</div><div class="h-unit">H</div></div>
           ${e.lateNightAllowance > 0 ? `
           <div class="hour-item" style="border-left:2px solid #e67e22;padding-left:12px;">
             <div class="h-label" style="color:#e67e22;">深夜作業手当</div>
@@ -739,7 +786,6 @@ function renderEntries() {
           </div>` : ''}
         </div>
       </div>
-      <!-- 帰社後作業 -->
       ${e.hasReturnWork ? `
       <div style="border-top:1px dashed #b2dfcc; padding-top:8px;">
         <div style="font-size:12px;font-weight:bold;color:#27ae60;margin-bottom:4px;">帰社後作業</div>
@@ -747,190 +793,269 @@ function renderEntries() {
         ${e.returnOrder ? `<div class="entry-details" style="color:#888;">No. ${e.returnOrder}</div>` : ''}
         ${e.returnSubject ? `<div class="entry-details">${e.returnSubject}</div>` : ''}
         <div class="entry-hours">
-          <div class="hour-item">
-            <div class="h-label">普通残業</div>
-            <div class="h-value">${e.returnRegular}</div>
-            <div class="h-unit">H</div>
-          </div>
-          <div class="hour-item">
-            <div class="h-label">深夜残業</div>
-            <div class="h-value">${e.returnLateNight}</div>
-            <div class="h-unit">H</div>
-          </div>
+          <div class="hour-item"><div class="h-label">普通残業</div><div class="h-value">${e.returnRegular}</div><div class="h-unit">H</div></div>
+          <div class="hour-item"><div class="h-label">深夜残業</div><div class="h-value">${e.returnLateNight}</div><div class="h-unit">H</div></div>
         </div>
       </div>` : ''}
-    </div>
-  `).join('');
+      ` : `<div style="font-size:13px;color:#888;padding:4px 0;">${e.start} ～ ${e.end}（${CAT_LABELS[cat]}）</div>`}
+      ${expenseTotal > 0 ? `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8d5b0;font-size:12px;color:#7a5c00;">
+        旅費: ${expenseTotal.toLocaleString()}円
+        ${e.dailyAllowance > 0 ? ` 日当:${e.dailyAllowance}円` : ''}
+        ${e.transportAmount > 0 ? ` 交通費:${e.transportAmount}円（${e.transportRoute || ''}）` : ''}
+        ${e.accommodation > 0 ? ` 宿泊費:${e.accommodation}円` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function updateSummary() {
   const card = document.getElementById('summaryCard');
-  if (entries.length === 0) {
-    card.style.display = 'none';
-    return;
-  }
+  const overtime = entries.filter(e => hasOvertimeCategory(e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular')));
+  if (overtime.length === 0) { card.style.display = 'none'; return; }
   card.style.display = 'block';
-  document.getElementById('totalCount').textContent = entries.length;
-  const totalReg = entries.reduce((s, e) => s + e.regular, 0);
-  const totalNight = entries.reduce((s, e) => s + e.lateNight, 0);
-  const totalAllowance = entries.reduce((s, e) => s + (e.lateNightAllowance || 0), 0);
-  document.getElementById('totalRegular').textContent = Math.round(totalReg * 10) / 10;
-  document.getElementById('totalLateNight').textContent = Math.round(totalNight * 10) / 10;
-  document.getElementById('totalLateNightAllowance').textContent = totalAllowance.toLocaleString();
+  document.getElementById('totalCount').textContent = overtime.length;
+  document.getElementById('totalRegular').textContent = Math.round(overtime.reduce((s,e) => s + e.regular, 0) * 10) / 10;
+  document.getElementById('totalLateNight').textContent = Math.round(overtime.reduce((s,e) => s + e.lateNight, 0) * 10) / 10;
+  document.getElementById('totalLateNightAllowance').textContent = overtime.reduce((s,e) => s + (e.lateNightAllowance || 0), 0).toLocaleString();
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const [y, m, day] = dateStr.split('-').map(Number);
-  const d = new Date(y, m - 1, day); // ローカル時刻で生成（UTC誤差を防ぐ）
-  const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+  const wd = ['日','月','火','水','木','金','土'][new Date(y, m-1, day).getDay()];
   return `${y}年${m}月${day}日（${wd}）`;
 }
 
-// ===== Excel エクスポート =====
-function exportToExcel() {
-  if (entries.length === 0) {
-    alert('登録データがありません');
+// ===== 旬判定 =====
+function getJun(dateStr) {
+  const day = parseInt(dateStr.split('-')[2]);
+  if (day <= 10) return 'upper';
+  if (day <= 20) return 'mid';
+  return 'lower';
+}
+const JUN_LABELS = { upper: '上旬', mid: '中旬', lower: '下旬', all: '全期間' };
+
+// ===== 旬報タブ表示 =====
+function renderExpenseTab() {
+  const month = document.getElementById('junMonth').value;
+  const jun = document.getElementById('junSelect').value;
+  const content = document.getElementById('expenseContent');
+
+  if (!month) { content.innerHTML = '<div class="empty-state">対象年月を選択してください</div>'; return; }
+
+  const [y, m] = month.split('-').map(Number);
+  const filtered = entries.filter(e => {
+    if (!e.date.startsWith(month)) return false;
+    if (jun !== 'all' && getJun(e.date) !== jun) return false;
+    return true;
+  }).sort((a,b) => a.date.localeCompare(b.date));
+
+  if (filtered.length === 0) {
+    content.innerHTML = '<div class="empty-state">該当するデータがありません</div>';
     return;
   }
 
-  const wb = XLSX.utils.book_new();
+  // 明細テーブル
+  const rows = filtered.map(e => {
+    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
+    const subtotal = (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0);
+    return `<tr>
+      <td>${formatDate(e.date)}</td>
+      <td>${e.order || ''}</td>
+      <td>${e.subject || ''}</td>
+      <td>${CAT_LABELS[cat] || cat}</td>
+      <td>${e.start || ''}〜${e.end || ''}</td>
+      <td style="text-align:right;">${e.dailyAllowance > 0 ? e.dailyAllowance.toLocaleString() : '—'}</td>
+      <td>${e.transportType || ''}</td>
+      <td>${e.transportRoute || ''}</td>
+      <td style="text-align:right;">${e.transportAmount > 0 ? e.transportAmount.toLocaleString() : '—'}</td>
+      <td style="text-align:right;">${e.accommodation > 0 ? e.accommodation.toLocaleString() : '—'}</td>
+      <td style="text-align:right;font-weight:bold;">${subtotal > 0 ? subtotal.toLocaleString() : '—'}</td>
+      <td>${e.remarks || ''}</td>
+    </tr>`;
+  }).join('');
 
-  // --- 報告書シート ---
-  // 名前別にグループ化
-  const byName = {};
-  entries.forEach(e => {
-    if (!byName[e.name]) byName[e.name] = [];
-    byName[e.name].push(e);
+  const totalDaily = filtered.reduce((s,e) => s + (e.dailyAllowance || 0), 0);
+  const totalTransport = filtered.reduce((s,e) => s + (e.transportAmount || 0), 0);
+  const totalAccom = filtered.reduce((s,e) => s + (e.accommodation || 0), 0);
+  const grandTotal = totalDaily + totalTransport + totalAccom;
+
+  // オーダー別集計
+  const byOrder = {};
+  filtered.forEach(e => {
+    const key = e.order || '（オーダーなし）';
+    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', days: 0, transport: 0, allowance: 0 };
+    byOrder[key].days++;
+    byOrder[key].transport += e.transportAmount || 0;
+    byOrder[key].allowance += e.dailyAllowance || 0;
   });
+  const costRate = settings.costRate || 0;
+  const orderRows = Object.entries(byOrder).map(([order, d]) => {
+    const cost = d.days * costRate;
+    return `<tr>
+      <td>${order}</td>
+      <td>${d.subject}</td>
+      <td style="text-align:right;">${d.days}日</td>
+      <td style="text-align:right;">${d.transport.toLocaleString()}円</td>
+      <td style="text-align:right;">${d.allowance.toLocaleString()}円</td>
+      <td style="text-align:right;">${costRate > 0 ? cost.toLocaleString() + '円' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const reiwa = y - 2018;
+  content.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:14px;font-weight:bold;color:#1a3a5c;">
+        令和${reiwa}年${m}月 ${JUN_LABELS[jun]}　${settings.name || ''}　${settings.dept || ''}
+      </div>
+      <button class="btn btn-success btn-sm" style="width:auto;" onclick="exportExpenseExcel()">
+        旬報 Excel ダウンロード
+      </button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="expense-table">
+        <thead><tr>
+          <th>日付</th><th>オーダー</th><th>件名</th><th>区分</th><th>勤務時間</th>
+          <th>日当</th><th>交通機関</th><th>区間</th><th>交通費</th><th>宿泊費</th><th>小計</th><th>備考</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr class="expense-total-row">
+          <td colspan="5" style="text-align:right;">合計</td>
+          <td style="text-align:right;">${totalDaily.toLocaleString()}</td>
+          <td colspan="2"></td>
+          <td style="text-align:right;">${totalTransport.toLocaleString()}</td>
+          <td style="text-align:right;">${totalAccom.toLocaleString()}</td>
+          <td style="text-align:right;">${grandTotal.toLocaleString()}円</td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <h3 style="font-size:14px;color:#1a3a5c;margin:20px 0 8px;">オーダー別集計</h3>
+    <div style="overflow-x:auto;">
+      <table class="expense-table">
+        <thead><tr>
+          <th>オーダー番号</th><th>件名</th><th>日数</th><th>交通費</th><th>日当</th><th>勤務原価</th>
+        </tr></thead>
+        <tbody>${orderRows}</tbody>
+      </table>
+    </div>
+    ${costRate === 0 ? '<p style="font-size:12px;color:#888;margin-top:8px;">※ 勤務原価を表示するには設定タブで単価を登録してください</p>' : ''}
+  `;
+}
+
+// ===== 残業報告書 Excel =====
+function exportOvertimeExcel() {
+  const overtime = entries.filter(e => hasOvertimeCategory(e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular')));
+  if (overtime.length === 0) { alert('残業データがありません'); return; }
+  const wb = XLSX.utils.book_new();
+  const byName = {};
+  overtime.forEach(e => { if (!byName[e.name]) byName[e.name] = []; byName[e.name].push(e); });
 
   Object.entries(byName).forEach(([name, items]) => {
     const wsData = [];
-
-    wsData.push(['時間外作業報告書', '', '', '', '', '', '', '']);
-    wsData.push(['下記のとおり時間外作業を報告します。', '', '', '', '', '', '', '']);
+    wsData.push(['時間外作業報告書']);
+    wsData.push(['下記のとおり時間外作業を報告します。']);
     wsData.push(['']);
-
-    // 日付は最初のエントリの日付
-    const firstDate = new Date(items[0].date + 'T00:00:00');
-    const y = firstDate.getFullYear() - 2018; // 令和換算
-    wsData.push(['日付', `令和　${y}年`, `${firstDate.getMonth()+1}月`, `${firstDate.getDate()}日`, '', '報告者氏名', name, '']);
+    const fd = new Date(items[0].date + 'T00:00:00');
+    const ry = fd.getFullYear() - 2018;
+    wsData.push(['日付', `令和　${ry}年`, `${fd.getMonth()+1}月`, `${fd.getDate()}日`, '', '報告者氏名', name, '', '社員番号', items[0].empNo || '']);
     wsData.push(['']);
-
-    // ヘッダー行
-    wsData.push(['区分', '平日/休日', '日付', 'オーダー №', '件名', '作業開始', '作業終了', '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)']);
-
+    wsData.push(['区分', '勤務区分', '日付', 'オーダー №', '件名', '作業開始', '作業終了', '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)']);
     items.forEach(e => {
-      // 現場作業行
-      wsData.push([
-        e.workType === 'onsite' ? '現場作業' : '社内作業',
-        e.dayType === 'weekday' ? '平日' : '休日',
-        e.date,
-        e.order,
-        e.subject,
-        e.start,
-        e.end,
-        e.mainRegular,
-        e.mainLateNight,
-        e.lateNightAllowance || 0,
-      ]);
-      // 帰社後作業行（ある場合のみ）
-      if (e.hasReturnWork) {
-        wsData.push([
-          '帰社後作業',
-          e.dayType === 'weekday' ? '平日' : '休日',
-          e.date,
-          e.returnOrder,
-          e.returnSubject,
-          e.returnStart,
-          e.returnEnd,
-          e.returnRegular,
-          e.returnLateNight,
-          '',
-        ]);
-      }
+      const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
+      wsData.push([e.workType === 'onsite' ? '現場作業' : '社内作業', CAT_LABELS[cat], e.date, e.order, e.subject, e.start, e.end, e.mainRegular, e.mainLateNight, e.lateNightAllowance || 0]);
+      if (e.hasReturnWork) wsData.push(['帰社後作業', CAT_LABELS[cat], e.date, e.returnOrder, e.returnSubject, e.returnStart, e.returnEnd, e.returnRegular, e.returnLateNight, '']);
     });
-
     wsData.push(['']);
-    const totalReg = items.reduce((s, e) => s + e.regular, 0);
-    const totalNight = items.reduce((s, e) => s + e.lateNight, 0);
-    const totalAllowance = items.reduce((s, e) => s + (e.lateNightAllowance || 0), 0);
-    wsData.push(['', '', '', '', '', '', '合計',
-      Math.round(totalReg * 10) / 10,
-      Math.round(totalNight * 10) / 10,
-      totalAllowance
-    ]);
-
+    wsData.push(['','','','','','','合計', Math.round(items.reduce((s,e)=>s+e.regular,0)*10)/10, Math.round(items.reduce((s,e)=>s+e.lateNight,0)*10)/10, items.reduce((s,e)=>s+(e.lateNightAllowance||0),0)]);
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // 列幅設定
-    ws['!cols'] = [
-      {wch: 10}, {wch: 10}, {wch: 14}, {wch: 14}, {wch: 24},
-      {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 16}
-    ];
-
-    // シート名（名前、20文字まで）
-    const sheetName = name.substring(0, 20) || 'Sheet1';
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    ws['!cols'] = [{wch:10},{wch:8},{wch:14},{wch:14},{wch:24},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws, name.substring(0,20) || 'Sheet1');
   });
 
-  // --- 一覧シート ---
-  const listData = [
-    ['日付', '報告者氏名', '区分', '平日/休日', 'オーダー №', '件名', '開始時間', '終了時間', '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)']
-  ];
-  entries.forEach(e => {
-    // 現場作業行
-    listData.push([
-      e.date,
-      e.name,
-      e.workType === 'onsite' ? '現場作業' : '社内作業',
-      e.dayType === 'weekday' ? '平日' : '休日',
-      e.order,
-      e.subject,
-      e.start,
-      e.end,
-      e.mainRegular,
-      e.mainLateNight,
-      e.lateNightAllowance || 0,
-    ]);
-    // 帰社後作業行
-    if (e.hasReturnWork) {
-      listData.push([
-        e.date,
-        e.name,
-        '帰社後作業',
-        e.dayType === 'weekday' ? '平日' : '休日',
-        e.returnOrder,
-        e.returnSubject,
-        e.returnStart,
-        e.returnEnd,
-        e.returnRegular,
-        e.returnLateNight,
-        '',
-      ]);
-    }
+  // 一覧シート
+  const listData = [['日付','報告者氏名','社員番号','区分','勤務区分','オーダー №','件名','開始','終了','普通残業(H)','深夜残業(H)','深夜作業手当(円)']];
+  overtime.forEach(e => {
+    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
+    listData.push([e.date, e.name, e.empNo||'', e.workType==='onsite'?'現場作業':'社内作業', CAT_LABELS[cat], e.order, e.subject, e.start, e.end, e.mainRegular, e.mainLateNight, e.lateNightAllowance||0]);
+    if (e.hasReturnWork) listData.push([e.date, e.name, e.empNo||'', '帰社後作業', CAT_LABELS[cat], e.returnOrder, e.returnSubject, e.returnStart, e.returnEnd, e.returnRegular, e.returnLateNight, '']);
   });
-  // 合計行
-  const tReg = entries.reduce((s, e) => s + e.regular, 0);
-  const tNight = entries.reduce((s, e) => s + e.lateNight, 0);
-  const tAllowance = entries.reduce((s, e) => s + (e.lateNightAllowance || 0), 0);
-  listData.push(['', '', '', '', '', '', '', '合計',
-    Math.round(tReg * 10) / 10,
-    Math.round(tNight * 10) / 10,
-    tAllowance
-  ]);
-
+  listData.push(['','','','','','','','','合計', Math.round(overtime.reduce((s,e)=>s+e.regular,0)*10)/10, Math.round(overtime.reduce((s,e)=>s+e.lateNight,0)*10)/10, overtime.reduce((s,e)=>s+(e.lateNightAllowance||0),0)]);
   const wsList = XLSX.utils.aoa_to_sheet(listData);
-  wsList['!cols'] = [
-    {wch: 14}, {wch: 14}, {wch: 10}, {wch: 10}, {wch: 14},
-    {wch: 24}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 16}
-  ];
+  wsList['!cols'] = [{wch:14},{wch:14},{wch:12},{wch:10},{wch:8},{wch:14},{wch:24},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
   XLSX.utils.book_append_sheet(wb, wsList, '一覧');
 
-  // ファイル名に日付
   const today = new Date();
-  const fname = `時間外作業報告書_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.xlsx`;
-  XLSX.writeFile(wb, fname);
+  XLSX.writeFile(wb, `時間外作業報告書_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.xlsx`);
+}
+
+// ===== 旬報 Excel =====
+function exportExpenseExcel() {
+  const month = document.getElementById('junMonth').value;
+  const jun = document.getElementById('junSelect').value;
+  if (!month) { alert('対象年月を選択してください'); return; }
+
+  const [y, m] = month.split('-').map(Number);
+  const filtered = entries.filter(e => {
+    if (!e.date.startsWith(month)) return false;
+    if (jun !== 'all' && getJun(e.date) !== jun) return false;
+    return true;
+  }).sort((a,b) => a.date.localeCompare(b.date));
+
+  if (filtered.length === 0) { alert('該当データがありません'); return; }
+
+  const reiwa = y - 2018;
+  const junLabel = JUN_LABELS[jun];
+  const wb = XLSX.utils.book_new();
+  const wsData = [];
+  wsData.push([`旅費交通費等精算書`]);
+  wsData.push([`令和${reiwa}年${m}月${junLabel}`]);
+  wsData.push(['氏名', settings.name || filtered[0].name, '', '社員番号', settings.empNo || filtered[0].empNo || '', '', '所属', settings.dept || '']);
+  wsData.push(['']);
+  wsData.push(['日付','オーダー №','件名','勤務区分','開始','終了','日当(円)','交通機関','区間','交通費(円)','宿泊費(円)','小計(円)','備考']);
+
+  const costRate = settings.costRate || 0;
+  filtered.forEach(e => {
+    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
+    const subtotal = (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0);
+    wsData.push([
+      e.date, e.order || '', e.subject || '', CAT_LABELS[cat] || cat,
+      e.start || '', e.end || '',
+      e.dailyAllowance || 0,
+      e.transportType || '', e.transportRoute || '',
+      e.transportAmount || 0, e.accommodation || 0,
+      subtotal, e.remarks || ''
+    ]);
+  });
+
+  wsData.push(['']);
+  const totalDaily = filtered.reduce((s,e) => s + (e.dailyAllowance || 0), 0);
+  const totalTransport = filtered.reduce((s,e) => s + (e.transportAmount || 0), 0);
+  const totalAccom = filtered.reduce((s,e) => s + (e.accommodation || 0), 0);
+  wsData.push(['','','','','','合計', totalDaily, '', '', totalTransport, totalAccom, totalDaily + totalTransport + totalAccom, '']);
+
+  // オーダー別集計
+  wsData.push(['']);
+  wsData.push(['【オーダー別集計】']);
+  wsData.push(['オーダー番号', '件名', '日数', '交通費(円)', '日当(円)', '勤務原価(円)', '合計(円)']);
+  const byOrder = {};
+  filtered.forEach(e => {
+    const key = e.order || '（なし）';
+    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', days: 0, transport: 0, allowance: 0 };
+    byOrder[key].days++;
+    byOrder[key].transport += e.transportAmount || 0;
+    byOrder[key].allowance += e.dailyAllowance || 0;
+  });
+  Object.entries(byOrder).forEach(([order, d]) => {
+    const cost = d.days * costRate;
+    wsData.push([order, d.subject, d.days, d.transport, d.allowance, cost, d.transport + d.allowance + cost]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:14},{wch:14},{wch:20},{wch:8},{wch:8},{wch:8},{wch:10},{wch:12},{wch:16},{wch:12},{wch:12},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws, '旬報');
+  XLSX.writeFile(wb, `旬報_${y}年${m}月${junLabel}_${settings.name || ''}.xlsx`);
 }
 </script>
 
