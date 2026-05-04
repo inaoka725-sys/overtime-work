@@ -1,10 +1,10 @@
-# 時間外作業報告書アプリ
+# 時間外・旅費精算書アプリ
 
 ## 基本原則
 > 「シンプルさは究極の洗練である」
 
 - **最小性**: 不要なコードは一文字も残さない。必要最小限を超えない
-- **単一性**: 真実の源は常に一つ（要件: docs/requirements.md、進捗: docs/SCOPE_PROGRESS.md）
+- **単一性**: 真実の源は常に一つ（要件: overtime/docs/requirements.md、進捗: overtime/docs/SCOPE_PROGRESS.md）
 - **実証性**: 推測しない。規程（時間外手当基準）を必ず参照して計算ロジックを検証する
 - **潔癖性**: エラーは隠さない
 
@@ -13,12 +13,15 @@
 ```yaml
 アーキテクチャ: 単一HTMLファイル（サーバーレス）
 ファイル構成:
-  - index.html      # メインアプリ（HTML+CSS+JS 一体）
-  - manual.html     # 操作マニュアル
-  - docs/requirements.md     # 要件定義書
-  - docs/SCOPE_PROGRESS.md   # 実装進捗
+  overtime/
+    - index.html          # メインアプリ（HTML+CSS+JS 一体、3タブ構成）
+    - manual.html         # 操作マニュアル
+    - docs/
+        - requirements.md     # 要件定義書
+        - SCOPE_PROGRESS.md   # 実装進捗
 外部ライブラリ:
   - SheetJS (xlsx-latest) via CDN — Excel出力専用
+ホスティング: GitHub Pages（https://inaoka725-sys.github.io/overtime-work/）
 ```
 
 ## 規程の重要ルール（計算ロジックに関わる）
@@ -43,7 +46,7 @@
 ## コード品質
 
 - 関数: 100行以下 / ファイル: 1000行以下 / 行長: 120文字
-- 計算ロジックの変更は必ず `docs/requirements.md` の規程ルールと照合すること
+- 計算ロジックの変更は必ず `overtime/docs/requirements.md` の規程ルールと照合すること
 
 ## 開発ルール
 
@@ -70,6 +73,6 @@
 ## ドキュメント管理
 
 許可されたドキュメントのみ作成可能:
-- docs/requirements.md（要件定義）
-- docs/SCOPE_PROGRESS.md（実装計画・進捗）
+- overtime/docs/requirements.md（要件定義）
+- overtime/docs/SCOPE_PROGRESS.md（実装計画・進捗）
 上記以外のドキュメント作成はユーザー許諾が必要。
