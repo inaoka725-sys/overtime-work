@@ -413,15 +413,31 @@
 
   <div class="card">
     <h2>オーダーマスター</h2>
-    <p style="font-size:13px; color:#666; margin-bottom:12px;">オーダー番号を登録すると、入力フォームで件名・日当が自動補完されます。</p>
+    <p style="font-size:13px; color:#666; margin-bottom:8px;">オーダー番号を登録すると、入力フォームで件名・担当者・日当が自動補完されます。</p>
+
+    <!-- Excelインポート -->
+    <div style="margin-bottom:16px; padding:12px; background:#f0f8ff; border:1px solid #b0d4f0; border-radius:8px;">
+      <div style="font-size:13px; font-weight:bold; color:#1a3a5c; margin-bottom:6px;">Excelファイルから一括読み込み</div>
+      <div style="font-size:12px; color:#666; margin-bottom:8px;">オーダー台帳（.xls / .xlsx）を選択すると自動で取り込みます。元のファイルは変更されません。</div>
+      <input type="file" id="orderImportFile" accept=".xls,.xlsx" style="display:none;" onchange="importOrderMaster(event)">
+      <button class="btn btn-info btn-sm" style="width:auto;" onclick="document.getElementById('orderImportFile').click()">Excelから読み込む（オーダー台帳）</button>
+      <span id="importStatus" style="font-size:12px; color:#27ae60; margin-left:8px; display:none;"></span>
+    </div>
+
+    <!-- 手動追加 -->
+    <div style="font-size:12px; font-weight:bold; color:#555; margin-bottom:6px;">手動追加</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;">
       <div class="form-group" style="flex:1;min-width:90px;">
         <label>オーダー番号</label>
-        <input type="text" id="newOrderNo" placeholder="例: A-001">
+        <input type="text" id="newOrderNo" placeholder="例: 310101">
       </div>
       <div class="form-group" style="flex:2;min-width:140px;">
         <label>件名</label>
         <input type="text" id="newOrderSubject" placeholder="例: ○○新築工事">
+      </div>
+      <div class="form-group" style="flex:1;min-width:80px;">
+        <label>担当者</label>
+        <input type="text" id="newOrderAssignee" placeholder="担当者">
       </div>
       <div class="form-group" style="flex:1;min-width:80px;">
         <label>日当（円）</label>
@@ -531,12 +547,13 @@ function saveOrderMaster() { localStorage.setItem(ORDER_MASTER_KEY, JSON.stringi
 function addOrderMasterEntry() {
   const no = document.getElementById('newOrderNo').value.trim();
   const subject = document.getElementById('newOrderSubject').value.trim();
+  const assignee = document.getElementById('newOrderAssignee').value.trim();
   const allowance = parseInt(document.getElementById('newOrderAllowance').value) || 0;
   if (!no) { alert('オーダー番号を入力してください'); return; }
-  orderMaster[no] = { subject, allowance };
+  orderMaster[no] = { subject, assignee, allowance };
   saveOrderMaster();
   renderOrderMaster();
-  ['newOrderNo','newOrderSubject','newOrderAllowance'].forEach(id => { document.getElementById(id).value = ''; });
+  ['newOrderNo','newOrderSubject','newOrderAssignee','newOrderAllowance'].forEach(id => { document.getElementById(id).value = ''; });
 }
 
 function deleteOrderMasterEntry(no) {
@@ -549,18 +566,26 @@ function deleteOrderMasterEntry(no) {
 function renderOrderMaster() {
   const list = document.getElementById('orderMasterList');
   if (!list) return;
-  const entries = Object.entries(orderMaster).sort((a,b) => a[0].localeCompare(b[0]));
-  if (entries.length === 0) {
+  const allEntries = Object.entries(orderMaster).sort((a,b) => a[0].localeCompare(b[0]));
+  const total = allEntries.length;
+  if (total === 0) {
     list.innerHTML = '<div style="font-size:13px;color:#aaa;padding:8px 0;">登録なし</div>';
     return;
   }
-  list.innerHTML = entries.map(([no, d]) => `
-    <div class="order-master-row">
-      <div style="font-size:13px;font-weight:bold;flex:1;min-width:80px;">${no}</div>
-      <div style="font-size:13px;color:#555;flex:3;">${d.subject || ''}</div>
-      <div style="font-size:13px;width:60px;text-align:right;color:#888;">${d.allowance || 0}円</div>
-      <button class="btn btn-danger" style="padding:3px 10px;font-size:12px;" onclick="deleteOrderMasterEntry('${no.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">削除</button>
-    </div>`).join('');
+  // 件数ヘッダー + 最新100件だけ表示（全件は重いため）
+  const display = allEntries.slice(0, 100);
+  const more = total > 100 ? `<div style="font-size:12px;color:#888;padding:6px 0;">... 他 ${total - 100} 件（合計 ${total} 件）</div>` : '';
+  list.innerHTML = `<div style="font-size:12px;color:#1a3a5c;font-weight:bold;margin-bottom:6px;">計 ${total} 件登録済み</div>` +
+    display.map(([no, d]) => {
+      const safeNo = no.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="order-master-row">
+        <div style="font-size:13px;font-weight:bold;flex:1;min-width:80px;">${no}</div>
+        <div style="font-size:13px;color:#555;flex:3;">${d.subject || ''}</div>
+        <div style="font-size:12px;color:#888;flex:1;">${d.assignee || ''}</div>
+        <div style="font-size:13px;width:55px;text-align:right;color:#888;">${d.allowance || 0}円</div>
+        <button class="btn btn-danger" style="padding:3px 10px;font-size:12px;" onclick="deleteOrderMasterEntry('${safeNo}')">削除</button>
+      </div>`;
+    }).join('') + more;
 }
 
 function applyOrderMaster(orderNo, subjectId, allowanceId) {
@@ -568,6 +593,77 @@ function applyOrderMaster(orderNo, subjectId, allowanceId) {
   if (!d) return;
   if (subjectId && !document.getElementById(subjectId).value) document.getElementById(subjectId).value = d.subject || '';
   if (allowanceId) document.getElementById(allowanceId).value = d.allowance || 0;
+}
+
+// ===== オーダー台帳 Excelインポート =====
+function importOrderMaster(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+
+      // 「台帳」を含むシートを優先、なければ先頭シート
+      const sheetName = wb.SheetNames.find(n => n.includes('台帳')) || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // ヘッダー行: 「ｵｰﾀﾞｰ」または「オーダー」を含む行を探す
+      let headerRow = -1;
+      for (let i = 0; i < Math.min(20, rows.length); i++) {
+        if (rows[i].some(c => String(c).includes('ｵｰﾀﾞｰ') || String(c).includes('オーダー'))) {
+          headerRow = i; break;
+        }
+      }
+      if (headerRow === -1) { alert('ヘッダー行が見つかりません。\nオーダーNo. の列が必要です。'); return; }
+
+      // 列位置を自動特定（ヘッダー行から）
+      const headers = rows[headerRow].map(c => String(c));
+      const colOrder    = headers.findIndex(h => h.includes('ｵｰﾀﾞｰ') || h.includes('オーダー'));
+      const colSubject  = headers.findIndex(h => h.includes('件名') || h.includes('工事'));
+      const colAssignee = headers.findIndex(h => h.includes('担当'));
+      const colAllowance= headers.findIndex(h => h.includes('日当'));
+
+      if (colOrder === -1) { alert('オーダーNo. 列が見つかりません'); return; }
+
+      const newMaster = {};
+      let count = 0;
+      for (let i = headerRow + 1; i < rows.length; i++) {
+        const row = rows[i];
+        const orderVal = row[colOrder];
+        if (orderVal === '' || orderVal === null || orderVal === undefined) continue;
+        const orderNo = typeof orderVal === 'number'
+          ? Math.round(orderVal).toString()
+          : String(orderVal).trim();
+        if (!orderNo || orderNo === '0') continue;
+
+        const subject  = colSubject  >= 0 ? String(row[colSubject]  || '').trim() : '';
+        const assignee = colAssignee >= 0 ? String(row[colAssignee] || '').trim() : '';
+        const rawAllow = colAllowance >= 0 ? row[colAllowance] : 0;
+        const allowance = typeof rawAllow === 'number' ? Math.round(rawAllow) : (parseInt(rawAllow) || 0);
+
+        newMaster[orderNo] = { subject, assignee, allowance };
+        count++;
+      }
+
+      if (count === 0) { alert('データが見つかりませんでした'); return; }
+      if (!confirm(`${count} 件のオーダーを読み込みます。\n現在のマスターを上書きしますか？`)) return;
+
+      orderMaster = newMaster;
+      saveOrderMaster();
+      renderOrderMaster();
+      const status = document.getElementById('importStatus');
+      status.textContent = `✓ ${count} 件を読み込みました`;
+      status.style.display = 'inline';
+      setTimeout(() => { status.style.display = 'none'; }, 4000);
+    } catch(err) {
+      alert('読み込みエラー: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
 }
 
 // ===== 設定 =====
