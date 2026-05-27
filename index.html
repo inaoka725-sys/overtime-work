@@ -58,7 +58,11 @@
     .btn-success { background: #27ae60; color: white; }
     .btn-info { background: #2980b9; color: white; }
     .btn-danger { background: #e74c3c; color: white; font-size: 13px; padding: 6px 12px; width: auto; border-radius: 6px; margin-top: 0; }
+    .btn-warning { background: #e67e22; color: white; }
     .btn-sm { padding: 8px 16px; font-size: 13px; margin-top: 0; }
+    .edit-mode-banner { background: #fef9e7; border: 1px solid #f39c12; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #7a5c00; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .order-master-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #eee; }
+    .order-master-row:last-child { border-bottom: none; }
 
     .entries-list { display: flex; flex-direction: column; gap: 12px; }
     .entry-item { background: #f8f9fb; border: 1px solid #e0e4ea; border-radius: 10px; padding: 14px; }
@@ -230,12 +234,8 @@
       <h4>旅費・交通費（旬報）</h4>
       <div class="form-grid">
         <div class="form-group">
-          <label>日当</label>
-          <select id="inputDailyAllowance">
-            <option value="0">0円（なし）</option>
-            <option value="150">150円</option>
-            <option value="300">300円</option>
-          </select>
+          <label>日当（円）</label>
+          <input type="number" id="inputDailyAllowance" placeholder="0" min="0" step="1" value="0">
         </div>
         <div class="form-group">
           <label>宿泊費（円）</label>
@@ -299,7 +299,7 @@
             <div class="result-label">深夜残業</div>
             <div class="result-value" id="resultReturnLateNight">－<span>H</span></div>
           </div>
-          <div style="font-size:12px;color:#888;margin-top:4px;">帰社後：全時間が残業対象</div>
+          <div style="font-size:12px;color:#888;margin-top:4px;" id="resultReturnNote">帰社後作業</div>
         </div>
       </div>
     </div>
@@ -307,7 +307,11 @@
       有給・代休は残業計算の対象外です
     </div>
 
-    <button class="btn btn-primary" onclick="addEntry()">この内容を追加</button>
+    <div id="editModeBanner" class="edit-mode-banner" style="display:none;">
+      編集モード：内容を変更して「更新する」を押してください
+      <button class="btn btn-danger" style="padding:4px 12px;font-size:12px;" onclick="cancelEdit()">キャンセル</button>
+    </div>
+    <button class="btn btn-primary" id="addEntryBtn" onclick="addEntry()">この内容を追加</button>
   </div>
 
   <!-- 合計サマリー -->
@@ -335,7 +339,10 @@
         <div class="s-unit">円</div>
       </div>
     </div>
-    <button class="btn btn-success" onclick="exportOvertimeExcel()">残業報告書 Excel ダウンロード</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-success" style="flex:1;" onclick="exportOvertimeExcel()">残業報告書 Excel</button>
+      <button class="btn btn-info" style="flex:1;" onclick="exportOvertimeCSV()">残業報告書 CSV</button>
+    </div>
   </div>
 
   <!-- 登録済みリスト -->
@@ -405,6 +412,27 @@
   </div>
 
   <div class="card">
+    <h2>オーダーマスター</h2>
+    <p style="font-size:13px; color:#666; margin-bottom:12px;">オーダー番号を登録すると、入力フォームで件名・日当が自動補完されます。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end;">
+      <div class="form-group" style="flex:1;min-width:90px;">
+        <label>オーダー番号</label>
+        <input type="text" id="newOrderNo" placeholder="例: A-001">
+      </div>
+      <div class="form-group" style="flex:2;min-width:140px;">
+        <label>件名</label>
+        <input type="text" id="newOrderSubject" placeholder="例: ○○新築工事">
+      </div>
+      <div class="form-group" style="flex:1;min-width:80px;">
+        <label>日当（円）</label>
+        <input type="number" id="newOrderAllowance" placeholder="0" min="0" step="1">
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:auto;align-self:flex-end;" onclick="addOrderMasterEntry()">追加</button>
+    </div>
+    <div id="orderMasterList"></div>
+  </div>
+
+  <div class="card">
     <h2>データ管理</h2>
     <p style="font-size:13px; color:#666; margin-bottom:12px;">登録済みデータはブラウザのLocalStorageに保存されています。</p>
     <button class="btn btn-danger" style="width:auto; padding:10px 20px;" onclick="clearAllData()">全データを削除</button>
@@ -452,13 +480,13 @@ function timeToMin(str) {
 
 function roundToHalf(minutes) { return Math.round(minutes / 30) * 0.5; }
 
-function calcOvertime(startStr, endStr, isHoliday) {
+function calcOvertime(startStr, endStr, isHoliday, forcedOvertimeStartMin = null) {
   let startMin = timeToMin(startStr);
   let endMin = timeToMin(endStr);
   if (endMin === 0) endMin = 1440;
   if (endMin <= startMin) endMin += 1440;
   const breaks = getBreaks();
-  const overtimeStart = isHoliday ? startMin : startMin + 570;
+  const overtimeStart = forcedOvertimeStartMin !== null ? forcedOvertimeStartMin : (isHoliday ? startMin : startMin + 570);
   if (endMin <= overtimeStart) return { regular: 0, lateNight: 0, overtimeStart };
   let regularMin = 0, lateNightMin = 0;
   for (let day = 0; day < 3; day++) {
@@ -493,6 +521,54 @@ const CAT_BADGE  = { regular: 'badge-regular', holiday_work: 'badge-holiday-work
 
 function isHolidayCategory(cat) { return cat === 'holiday_work' || cat === 'comp_leave'; }
 function hasOvertimeCategory(cat) { return cat === 'regular' || cat === 'holiday_work'; }
+
+// ===== オーダーマスター =====
+const ORDER_MASTER_KEY = 'overtime_order_master';
+let orderMaster = JSON.parse(localStorage.getItem(ORDER_MASTER_KEY) || '{}');
+
+function saveOrderMaster() { localStorage.setItem(ORDER_MASTER_KEY, JSON.stringify(orderMaster)); }
+
+function addOrderMasterEntry() {
+  const no = document.getElementById('newOrderNo').value.trim();
+  const subject = document.getElementById('newOrderSubject').value.trim();
+  const allowance = parseInt(document.getElementById('newOrderAllowance').value) || 0;
+  if (!no) { alert('オーダー番号を入力してください'); return; }
+  orderMaster[no] = { subject, allowance };
+  saveOrderMaster();
+  renderOrderMaster();
+  ['newOrderNo','newOrderSubject','newOrderAllowance'].forEach(id => { document.getElementById(id).value = ''; });
+}
+
+function deleteOrderMasterEntry(no) {
+  if (!confirm(`「${no}」を削除しますか？`)) return;
+  delete orderMaster[no];
+  saveOrderMaster();
+  renderOrderMaster();
+}
+
+function renderOrderMaster() {
+  const list = document.getElementById('orderMasterList');
+  if (!list) return;
+  const entries = Object.entries(orderMaster).sort((a,b) => a[0].localeCompare(b[0]));
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:#aaa;padding:8px 0;">登録なし</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([no, d]) => `
+    <div class="order-master-row">
+      <div style="font-size:13px;font-weight:bold;flex:1;min-width:80px;">${no}</div>
+      <div style="font-size:13px;color:#555;flex:3;">${d.subject || ''}</div>
+      <div style="font-size:13px;width:60px;text-align:right;color:#888;">${d.allowance || 0}円</div>
+      <button class="btn btn-danger" style="padding:3px 10px;font-size:12px;" onclick="deleteOrderMasterEntry('${no.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">削除</button>
+    </div>`).join('');
+}
+
+function applyOrderMaster(orderNo, subjectId, allowanceId) {
+  const d = orderMaster[orderNo.trim()];
+  if (!d) return;
+  if (subjectId && !document.getElementById(subjectId).value) document.getElementById(subjectId).value = d.subject || '';
+  if (allowanceId) document.getElementById(allowanceId).value = d.allowance || 0;
+}
 
 // ===== 設定 =====
 const SETTINGS_KEY = 'overtime_settings';
@@ -531,7 +607,7 @@ function switchTab(name) {
   document.getElementById(`tab-${name}`).classList.add('active');
   const idx = { overtime: 0, expense: 1, settings: 2 }[name];
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-  if (name === 'settings') loadSettingsToForm();
+  if (name === 'settings') { loadSettingsToForm(); renderOrderMaster(); }
   if (name === 'expense') {
     const today = new Date();
     const ym = document.getElementById('junMonth');
@@ -557,6 +633,14 @@ buildTimeSelect('inputStart', '09:00');
 buildTimeSelect('inputEnd', '21:00');
 buildTimeSelect('inputReturnStart', '20:00');
 buildTimeSelect('inputReturnEnd', '22:00');
+
+// オーダー番号 自動補完
+document.getElementById('inputOrder').addEventListener('change', function() {
+  applyOrderMaster(this.value, 'inputSubject', 'inputDailyAllowance');
+});
+document.getElementById('inputReturnOrder').addEventListener('change', function() {
+  applyOrderMaster(this.value, 'inputReturnSubject', null);
+});
 
 // 今日の日付
 const _today = new Date();
@@ -649,7 +733,7 @@ function calcCombinedOvertime(v) {
   const main = calcOvertime(v.start, v.end, isHoliday);
   let returnResult = null;
   if (v.hasReturnWork && v.returnStart && v.returnEnd) {
-    const ret = calcOvertime(v.returnStart, v.returnEnd, true);
+    const ret = calcOvertime(v.returnStart, v.returnEnd, isHoliday, main.overtimeStart);
     returnResult = { regular: ret.regular, lateNight: ret.lateNight };
   }
   const totalRegular = Math.round((main.regular + (returnResult ? returnResult.regular : 0)) * 10) / 10;
@@ -685,6 +769,10 @@ function updatePreview() {
     retSection.style.display = 'block';
     document.getElementById('resultReturnRegular').innerHTML = `${result.returnRegular}<span>H</span>`;
     document.getElementById('resultReturnLateNight').innerHTML = `${result.returnLateNight}<span>H</span>`;
+    const isHol = isHolidayCategory(v.workCategory);
+    document.getElementById('resultReturnNote').textContent = isHol
+      ? '帰社後（休出）：全時間が残業対象'
+      : `帰社後：残業開始 ${minToTimeStr(result.overtimeStart)} 適用`;
   } else {
     retSection.style.display = 'none';
   }
@@ -696,16 +784,80 @@ updatePreview();
 renderEntries();
 updateSummary();
 
-// ===== エントリー追加 =====
+// ===== 編集状態管理 =====
+let editingId = null;
+
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('addEntryBtn').textContent = 'この内容を追加';
+  document.getElementById('editModeBanner').style.display = 'none';
+}
+
+function editEntry(id) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  editingId = id;
+
+  document.getElementById('inputDate').value = e.date;
+  document.getElementById('inputName').value = e.name;
+  document.getElementById('inputEmpNo').value = e.empNo || '';
+  document.getElementById('inputOrder').value = e.order || '';
+  document.getElementById('inputSubject').value = e.subject || '';
+
+  // 勤務区分・区分ラジオをセット
+  ['workCategory', 'workType'].forEach(name => {
+    const val = name === 'workCategory' ? e.workCategory : e.workType;
+    const radio = document.querySelector(`input[name="${name}"][value="${val}"]`);
+    if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+  });
+
+  document.getElementById('inputStart').value = e.start;
+  document.getElementById('inputEnd').value = e.end;
+
+  // 帰社後作業
+  const cbReturn = document.getElementById('hasReturnWork');
+  cbReturn.checked = !!e.hasReturnWork;
+  cbReturn.dispatchEvent(new Event('change'));
+  if (e.hasReturnWork) {
+    document.getElementById('inputReturnOrder').value = e.returnOrder || '';
+    document.getElementById('inputReturnSubject').value = e.returnSubject || '';
+    document.getElementById('inputReturnStart').value = e.returnStart || '';
+    document.getElementById('inputReturnEnd').value = e.returnEnd || '';
+  }
+
+  // 旅費
+  document.getElementById('inputDailyAllowance').value = e.dailyAllowance || 0;
+  document.getElementById('inputAccommodation').value = e.accommodation || '';
+  document.getElementById('inputTransportType').value = e.transportType || '';
+  document.getElementById('inputTransportRoute').value = e.transportRoute || '';
+  document.getElementById('inputTransportAmount').value = e.transportRoundTrip
+    ? (e.transportAmount || 0) / 2 : (e.transportAmount || '');
+  const tripVal = e.transportRoundTrip ? 'roundtrip' : 'oneway';
+  const tripRadio = document.querySelector(`input[name="tripType"][value="${tripVal}"]`);
+  if (tripRadio) { tripRadio.checked = true; tripRadio.dispatchEvent(new Event('change')); }
+  document.getElementById('inputRemarks').value = e.remarks || '';
+
+  document.getElementById('addEntryBtn').textContent = '更新する';
+  document.getElementById('editModeBanner').style.display = 'flex';
+  updatePreview();
+  document.querySelector('.card h2').closest('.card').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== エントリー追加 / 更新 =====
 function addEntry() {
   const v = getFormValues();
   if (!v.date) { alert('日付を入力してください'); return; }
   if (!v.name) { alert('報告者氏名を入力してください'); return; }
   if (hasOvertimeCategory(v.workCategory) && (!v.start || !v.end)) { alert('作業時間を入力してください'); return; }
 
+  // 重複チェック（編集中の自身は除外）
+  const isDuplicate = entries.some(e =>
+    e.id !== editingId && e.name === v.name && e.date === v.date && e.start === v.start
+  );
+  if (isDuplicate) { alert('同じ氏名・日付・開始時刻の登録が既に存在します'); return; }
+
   const result = calcCombinedOvertime(v);
-  entries.push({
-    id: Date.now(),
+  const entryData = {
     date: v.date, name: v.name, empNo: v.empNo, order: v.order, subject: v.subject,
     workCategory: v.workCategory, workType: v.workType,
     start: v.start, end: v.end,
@@ -714,16 +866,23 @@ function addEntry() {
     mainRegular: result.mainRegular, mainLateNight: result.mainLateNight,
     returnRegular: result.returnRegular, returnLateNight: result.returnLateNight,
     regular: result.regular, lateNight: result.lateNight, lateNightAllowance: result.lateNightAllowance,
-    // 旬報フィールド
     dailyAllowance: v.dailyAllowance, accommodation: v.accommodation,
     transportType: v.transportType, transportRoute: v.transportRoute,
     transportAmount: v.transportAmount, transportRoundTrip: v.transportRoundTrip,
     remarks: v.remarks,
-  });
+  };
+
+  if (editingId !== null) {
+    const idx = entries.findIndex(e => e.id === editingId);
+    if (idx !== -1) entries[idx] = { id: editingId, ...entryData };
+    cancelEdit();
+  } else {
+    entries.push({ id: Date.now(), ...entryData });
+  }
+
   saveEntries();
   renderEntries();
   updateSummary();
-  // リセット（日付・名前は維持）
   ['inputOrder','inputSubject','inputReturnOrder','inputReturnSubject',
    'inputTransportType','inputTransportRoute','inputTransportAmount',
    'inputAccommodation','inputRemarks'].forEach(id => {
@@ -769,7 +928,10 @@ function renderEntries() {
           </div>
           ${e.subject ? `<div class="entry-details">${e.subject}</div>` : ''}
         </div>
-        <button class="btn btn-danger" onclick="deleteEntry(${e.id})">削除</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-warning btn-sm" onclick="editEntry(${e.id})">編集</button>
+          <button class="btn btn-danger" onclick="deleteEntry(${e.id})">削除</button>
+        </div>
       </div>
       ${hasOvertimeCategory(cat) ? `
       <div style="margin-bottom:${e.hasReturnWork ? '8px' : '0'};">
@@ -988,6 +1150,28 @@ function exportOvertimeExcel() {
 
   const today = new Date();
   XLSX.writeFile(wb, `時間外作業報告書_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.xlsx`);
+}
+
+// ===== 残業報告書 CSV =====
+function exportOvertimeCSV() {
+  const overtime = entries.filter(e => hasOvertimeCategory(e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular')));
+  if (overtime.length === 0) { alert('残業データがありません'); return; }
+  const header = ['日付','報告者氏名','社員番号','区分','勤務区分','オーダーNo','件名','開始','終了','普通残業(H)','深夜残業(H)','深夜作業手当(円)'];
+  const rows = [header];
+  overtime.forEach(e => {
+    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
+    rows.push([e.date, e.name, e.empNo||'', e.workType==='onsite'?'現場作業':'社内作業', CAT_LABELS[cat], e.order||'', e.subject||'', e.start, e.end, e.mainRegular, e.mainLateNight, e.lateNightAllowance||0]);
+    if (e.hasReturnWork) rows.push([e.date, e.name, e.empNo||'', '帰社後作業', CAT_LABELS[cat], e.returnOrder||'', e.returnSubject||'', e.returnStart, e.returnEnd, e.returnRegular, e.returnLateNight, '']);
+  });
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = new Date();
+  a.href = url;
+  a.download = `残業報告書_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ===== 旬報 Excel =====
