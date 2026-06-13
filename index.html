@@ -829,7 +829,8 @@ function calcCombinedOvertime(v) {
   const main = calcOvertime(v.start, v.end, isHoliday);
   let returnResult = null;
   if (v.hasReturnWork && v.returnStart && v.returnEnd) {
-    const ret = calcOvertime(v.returnStart, v.returnEnd, isHoliday, main.overtimeStart);
+    const forcedStart = isHoliday ? timeToMin(v.returnStart) : main.overtimeStart;
+    const ret = calcOvertime(v.returnStart, v.returnEnd, isHoliday, forcedStart);
     returnResult = { regular: ret.regular, lateNight: ret.lateNight };
   }
   const totalRegular = Math.round((main.regular + (returnResult ? returnResult.regular : 0)) * 10) / 10;
@@ -945,6 +946,9 @@ function addEntry() {
   if (!v.date) { alert('日付を入力してください'); return; }
   if (!v.name) { alert('報告者氏名を入力してください'); return; }
   if (hasOvertimeCategory(v.workCategory) && (!v.start || !v.end)) { alert('作業時間を入力してください'); return; }
+  if (v.hasReturnWork && v.returnStart && v.end && timeToMin(v.returnStart) < timeToMin(v.end)) {
+    alert('帰社後の開始時間は作業終了時間以降に設定してください'); return;
+  }
 
   // 重複チェック（編集中の自身は除外）
   const isDuplicate = entries.some(e =>
