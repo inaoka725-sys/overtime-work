@@ -2123,7 +2123,7 @@ function exportExpenseExcel() {
     });
   });
   const nm = uniqueNames(all).length === 1 ? uniqueNames(all)[0] : (settings.name || '');
-  downloadBook(wb, `旬報_${periodSuffix(p.y, p.m, p.jun)}_${nm}.xlsx`);
+  downloadBook(wb, `旬報_${periodSuffix(p.y, p.m, p.jun)}${nm ? '_' + nm : ''}.xlsx`);
 }
 
 initApp();
