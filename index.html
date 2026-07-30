@@ -1989,6 +1989,9 @@ function junpoBody(ws, rows) {
   const cellS = (c, num) => xS({ border: xB(xEdge(c, 11, false, false)), numFmt: num ? NF_YEN : undefined,
     fill: c === 4 ? FILL_GRAY : undefined, alignment: c === 2 ? AL_LW : num ? AL_R : AL_C });   // c=2: 工事名
   const n = Math.max(15, rows.length);
+  // 区分欄は日数。同じ日付・区分に複数エントリーがあっても最初の行にだけ 1 を立て、
+  // 列の合計が合計行の日数（日付ユニーク数）と一致するようにする
+  const counted = new Set();
   for (let i = 0; i < n; i++) {
     const r = 8 + i, e = rows[i];
     for (let c = 0; c < 12; c++) xPut(ws, r, c, '', cellS(c, c >= 9));
@@ -1996,8 +1999,8 @@ function junpoBody(ws, rows) {
     xPut(ws, r, 0, mdText(e.date), cellS(0));
     xPut(ws, r, 1, e.order || '', cellS(1));
     xPut(ws, r, 2, e.subject || '', cellS(2));
-    const cc = CAT_COL[catOf(e)];
-    if (cc !== undefined) xPut(ws, r, cc, 1, cellS(cc));
+    const cat = catOf(e), cc = CAT_COL[cat], key = `${e.date} ${cat}`;
+    if (cc !== undefined && !counted.has(key)) { counted.add(key); xPut(ws, r, cc, 1, cellS(cc)); }
     // 残業対象外（有給・代休）は既定の勤務時間を印字しない
     if (hasOvertimeCategory(catOf(e))) {
       xPut(ws, r, 7, e.start || '', cellS(7)); xPut(ws, r, 8, e.end || '', cellS(8));
@@ -2012,7 +2015,7 @@ function junpoBody(ws, rows) {
   for (let c = 0; c < 12; c++) xPut(ws, tr, c, '', totS(c, c >= 9));
   xPut(ws, tr, 0, '合        計', totS(0)); xMerge(ws, tr, 0, tr, 2);
   Object.keys(CAT_COL).forEach(k => xPut(ws, tr, CAT_COL[k],
-    rows.filter(e => catOf(e) === k).length, totS(CAT_COL[k], true)));
+    new Set(rows.filter(e => catOf(e) === k).map(e => e.date)).size, totS(CAT_COL[k], true)));
   xPut(ws, tr, 9, rows.reduce((s, e) => s + (e.dailyAllowance || 0), 0), totS(9, true));
   xPut(ws, tr, 10, rows.reduce((s, e) => s + (e.transportAmount || 0), 0), totS(10, true));
   xPut(ws, tr, 11, rows.reduce((s, e) => s + junpoSubtotal(e), 0), totS(11, true));
