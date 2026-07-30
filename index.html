@@ -3,8 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>時間外・旅費精算書</title>
+  <title>旬報</title>
+  <!-- 読込用: 最新版SheetJS（.xls台帳の解析に使用） -->
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script>window.XLSX_READ = window.XLSX;</script>
+  <!-- 書出用: スタイル（罫線・塗り）対応版。window.XLSX を上書きする -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"
+    integrity="sha384-OUW9euuUyxyHcAhTqbhI+Iyb8LMssXt/cpz0yXhs9UWG2/R/uaWdakx/4cfww7Vb"
+    crossorigin="anonymous"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic Pro', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
@@ -109,6 +115,8 @@
     .jun-filter { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
     .jun-filter label { font-size: 13px; color: #555; }
     .jun-filter select, .jun-filter input { width: auto; font-size: 14px; padding: 6px 10px; }
+    .export-summary { font-size: 12px; color: #1a3a5c; background: #eef3f8; border: 1px solid #d3e0ec;
+      border-radius: 6px; padding: 6px 10px; margin: -8px 0 12px; }
 
     .settings-form { max-width: 500px; }
     .settings-form .form-group { margin-bottom: 16px; }
@@ -125,7 +133,7 @@
 <body>
 
 <header>
-  <h1>時間外・旅費精算書</h1>
+  <h1>旬報</h1>
   <p>提出期限：各旬報〆日から３営業日以内　→　直近上司→所属部長→事務</p>
 </header>
 
@@ -319,26 +327,37 @@
     <h2>合計</h2>
     <div class="summary-grid">
       <div class="summary-item">
-        <div class="s-label">登録件数</div>
+        <div class="s-label">登録件数（全登録分）</div>
         <div class="s-value" id="totalCount">0</div>
         <div class="s-unit">件</div>
       </div>
       <div class="summary-item">
-        <div class="s-label">普通残業 合計</div>
+        <div class="s-label">普通残業 合計（全登録分）</div>
         <div class="s-value" id="totalRegular">0</div>
         <div class="s-unit">H</div>
       </div>
       <div class="summary-item">
-        <div class="s-label">深夜残業 合計</div>
+        <div class="s-label">深夜残業 合計（全登録分）</div>
         <div class="s-value" id="totalLateNight">0</div>
         <div class="s-unit">H</div>
       </div>
       <div class="summary-item highlight">
-        <div class="s-label">深夜作業手当 合計</div>
+        <div class="s-label">深夜作業手当 合計（全登録分）</div>
         <div class="s-value" id="totalLateNightAllowance">0</div>
         <div class="s-unit">円</div>
       </div>
     </div>
+    <div class="jun-filter">
+      <label>出力対象:</label>
+      <input type="month" id="otMonth" onchange="updateExportSummary()">
+      <select id="otJun" onchange="updateExportSummary()">
+        <option value="upper">一旬（1〜10日）</option>
+        <option value="mid">二旬（11〜20日）</option>
+        <option value="lower">三旬（21〜末日）</option>
+        <option value="all">全期間（3旬まとめて）</option>
+      </select>
+    </div>
+    <div id="exportSummary" class="export-summary">対象 0件</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-success" style="flex:1;" onclick="exportOvertimeExcel()">残業報告書 Excel</button>
       <button class="btn btn-info" style="flex:1;" onclick="exportOvertimeCSV()">残業報告書 CSV</button>
@@ -368,9 +387,9 @@
       <label>旬:</label>
       <select id="junSelect">
         <option value="all">全期間</option>
-        <option value="upper">上旬（1〜10日）</option>
-        <option value="mid">中旬（11〜20日）</option>
-        <option value="lower">下旬（21〜末日）</option>
+        <option value="upper">一旬（1〜10日）</option>
+        <option value="mid">二旬（11〜20日）</option>
+        <option value="lower">三旬（21〜末日）</option>
       </select>
       <button class="btn btn-info btn-sm" style="width:auto;" onclick="renderExpenseTab()">表示</button>
     </div>
@@ -401,10 +420,10 @@
         <label>所属（部署）</label>
         <input type="text" id="settingDept" placeholder="所属部署">
       </div>
-      <div class="form-group" style="margin-bottom:16px;">
+      <div class="form-group" data-admin-only style="margin-bottom:16px; display:none;">
         <label>勤務原価単価（円/日）</label>
         <input type="number" id="settingCostRate" placeholder="例: 15000" min="0" step="1">
-        <div class="settings-hint">旬報のオーダー別集計に使用します</div>
+        <div class="settings-hint">旬報のオーダー別集計に使用します（管理者のみ）</div>
       </div>
       <button class="btn btn-primary" style="width:auto; padding:12px 32px;" onclick="saveSettings()">保存</button>
       <div id="settingsSaved" style="display:none; margin-top:8px; color:#27ae60; font-size:13px;">✓ 保存しました</div>
@@ -415,14 +434,22 @@
     <h2>オーダーマスター</h2>
     <p style="font-size:13px; color:#666; margin-bottom:8px;">オーダー番号を登録すると、入力フォームで件名・担当者・日当が自動補完されます。</p>
 
-    <!-- Excelインポート -->
+    <!-- 台帳の自動連携（File System Access API） -->
     <div style="margin-bottom:16px; padding:12px; background:#f0f8ff; border:1px solid #b0d4f0; border-radius:8px;">
-      <div style="font-size:13px; font-weight:bold; color:#1a3a5c; margin-bottom:6px;">Excelファイルから一括読み込み</div>
-      <div style="font-size:12px; color:#666; margin-bottom:8px;">オーダー台帳（.xls / .xlsx）を選択すると自動で取り込みます。元のファイルは変更されません。</div>
-      <input type="file" id="orderImportFile" accept=".xls,.xlsx" style="display:none;" onchange="importOrderMaster(event)">
-      <button class="btn btn-info btn-sm" style="width:auto;" onclick="document.getElementById('orderImportFile').click()">Excelから読み込む（オーダー台帳）</button>
-      <span id="importStatus" style="font-size:12px; color:#27ae60; margin-left:8px; display:none;"></span>
+      <div style="font-size:13px; font-weight:bold; color:#1a3a5c; margin-bottom:6px;">共有フォルダの台帳と自動連携</div>
+      <div id="ledgerLink"></div>
     </div>
+
+    <!-- Excelインポート（未対応ブラウザ・単発取込用） -->
+    <details id="manualImport" style="margin-bottom:16px;">
+      <summary style="font-size:12px; color:#666; cursor:pointer;">ファイルを選んで手動で取り込む</summary>
+      <div style="margin-top:8px; padding:12px; background:#fafafa; border:1px solid #e0e0e0; border-radius:8px;">
+        <div style="font-size:12px; color:#666; margin-bottom:8px;">オーダー台帳（.xls / .xlsx）を選択すると自動で取り込みます。元のファイルは変更されません。</div>
+        <input type="file" id="orderImportFile" accept=".xls,.xlsx" style="display:none;" onchange="importOrderMaster(event)">
+        <button class="btn btn-info btn-sm" style="width:auto;" onclick="document.getElementById('orderImportFile').click()">Excelから読み込む（オーダー台帳）</button>
+        <span id="importStatus" style="font-size:12px; color:#27ae60; margin-left:8px; display:none;"></span>
+      </div>
+    </details>
 
     <!-- 手動追加 -->
     <div style="font-size:12px; font-weight:bold; color:#555; margin-bottom:6px;">手動追加</div>
@@ -450,7 +477,24 @@
 
   <div class="card">
     <h2>データ管理</h2>
-    <p style="font-size:13px; color:#666; margin-bottom:12px;">登録済みデータはブラウザのLocalStorageに保存されています。</p>
+    <p style="font-size:13px; color:#666; margin-bottom:12px;">登録済みデータはブラウザのLocalStorageに保存されています。
+      PCの入替えやブラウザの履歴削除で消えるため、旬の途中でもときどきバックアップを取ってください。</p>
+
+    <div style="margin-bottom:16px; padding:12px; background:#f0f8ff; border:1px solid #b0d4f0; border-radius:8px;">
+      <div style="font-size:13px; font-weight:bold; color:#1a3a5c; margin-bottom:6px;">バックアップと復元</div>
+      <div style="font-size:12px; color:#666; margin-bottom:8px;">作業データと設定（氏名・社員番号・所属）をJSONファイルに書き出します。
+        オーダーマスターは台帳から取り込み直せるため含みません。</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-success btn-sm" style="width:auto;" onclick="exportBackup()">データをバックアップ</button>
+        <input type="file" id="backupFile" accept=".json,application/json" style="display:none;"
+          onchange="importBackup(event)">
+        <button class="btn btn-info btn-sm" style="width:auto;"
+          onclick="document.getElementById('backupFile').click()">バックアップから復元</button>
+      </div>
+      <div id="backupStatus" style="font-size:12px; margin-top:8px; display:none;"></div>
+    </div>
+
+    <p style="font-size:12px; color:#e67e22; margin-bottom:8px;">⚠ 削除すると元に戻せません。先に「データをバックアップ」を取ることをお勧めします。</p>
     <button class="btn btn-danger" style="width:auto; padding:10px 20px;" onclick="clearAllData()">全データを削除</button>
   </div>
 
@@ -502,7 +546,9 @@ function calcOvertime(startStr, endStr, isHoliday, forcedOvertimeStartMin = null
   if (endMin === 0) endMin = 1440;
   if (endMin <= startMin) endMin += 1440;
   const breaks = getBreaks();
-  const overtimeStart = forcedOvertimeStartMin !== null ? forcedOvertimeStartMin : (isHoliday ? startMin : startMin + 570);
+  // 残業起点。実際に勤務していない時間を算入しないよう、勤務開始より前には遡らせない
+  const rawStart = forcedOvertimeStartMin !== null ? forcedOvertimeStartMin : (isHoliday ? startMin : startMin + 570);
+  const overtimeStart = Math.max(startMin, rawStart);
   if (endMin <= overtimeStart) return { regular: 0, lateNight: 0, overtimeStart };
   let regularMin = 0, lateNightMin = 0;
   for (let day = 0; day < 3; day++) {
@@ -595,67 +641,86 @@ function applyOrderMaster(orderNo, subjectId, allowanceId) {
   if (allowanceId) document.getElementById(allowanceId).value = d.allowance || 0;
 }
 
-// ===== オーダー台帳 Excelインポート =====
+// ===== オーダー台帳 パース（手動インポートと自動同期の共通処理） =====
+/**
+ * 台帳ブックを解析して { master, count } を返す。解析不能なら Error を投げる。
+ * 取得経路（file input / File System Access / 将来の fetch）に依存しない唯一の解析処理。
+ */
+function parseOrderWorkbook(uint8) {
+  const wb = XLSX_READ.read(uint8, { type: 'array' });
+
+  // 「台帳」を含むシートを優先、なければ先頭シート
+  const sheetName = wb.SheetNames.find(n => n.includes('台帳')) || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX_READ.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  // ヘッダー行: 「ｵｰﾀﾞｰ」または「オーダー」を含む行を探す
+  let headerRow = -1;
+  for (let i = 0; i < Math.min(20, rows.length); i++) {
+    if (rows[i].some(c => String(c).includes('ｵｰﾀﾞｰ') || String(c).includes('オーダー'))) {
+      headerRow = i; break;
+    }
+  }
+  if (headerRow === -1) throw new Error('ヘッダー行が見つかりません。オーダーNo. の列が必要です。');
+
+  // 列位置を自動特定（ヘッダー行から）
+  const headers = rows[headerRow].map(c => String(c));
+  const colOrder    = headers.findIndex(h => h.includes('ｵｰﾀﾞｰ') || h.includes('オーダー'));
+  const colSubject  = headers.findIndex(h => h.includes('件名') || h.includes('工事'));
+  const colAssignee = headers.findIndex(h => h.includes('担当'));
+  const colAllowance= headers.findIndex(h => h.includes('日当'));
+
+  if (colOrder === -1) throw new Error('オーダーNo. 列が見つかりません');
+
+  const master = {};
+  let count = 0;
+  for (let i = headerRow + 1; i < rows.length; i++) {
+    const row = rows[i];
+    const orderVal = row[colOrder];
+    if (orderVal === '' || orderVal === null || orderVal === undefined) continue;
+    const orderNo = typeof orderVal === 'number'
+      ? Math.round(orderVal).toString()
+      : String(orderVal).trim();
+    if (!orderNo || orderNo === '0') continue;
+
+    const subject  = colSubject  >= 0 ? String(row[colSubject]  || '').trim() : '';
+    const assignee = colAssignee >= 0 ? String(row[colAssignee] || '').trim() : '';
+    const rawAllow = colAllowance >= 0 ? row[colAllowance] : 0;
+    const allowance = typeof rawAllow === 'number' ? Math.round(rawAllow) : (parseInt(rawAllow) || 0);
+
+    master[orderNo] = { subject, assignee, allowance };
+    count++;
+  }
+  if (count === 0) throw new Error('データが見つかりませんでした');
+  return { master: master, count: count };
+}
+
+/**
+ * 取込の唯一の出口。取得経路（FSA / file input / 将来の fetch）が変わってもここは共通。
+ * IIS配信へ移行する際は fetch('./data/オーダー台帳.xls') の ArrayBuffer をここへ渡すだけでよい。
+ */
+function applyOrderWorkbook(uint8) {
+  const r = parseOrderWorkbook(uint8);
+  orderMaster = r.master;
+  saveOrderMaster();
+  renderOrderMaster();
+  return r.count;
+}
+
+// ===== オーダー台帳 手動インポート（未対応ブラウザ用に残す） =====
 function importOrderMaster(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: 'array' });
-
-      // 「台帳」を含むシートを優先、なければ先頭シート
-      const sheetName = wb.SheetNames.find(n => n.includes('台帳')) || wb.SheetNames[0];
-      const ws = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-      // ヘッダー行: 「ｵｰﾀﾞｰ」または「オーダー」を含む行を探す
-      let headerRow = -1;
-      for (let i = 0; i < Math.min(20, rows.length); i++) {
-        if (rows[i].some(c => String(c).includes('ｵｰﾀﾞｰ') || String(c).includes('オーダー'))) {
-          headerRow = i; break;
-        }
-      }
-      if (headerRow === -1) { alert('ヘッダー行が見つかりません。\nオーダーNo. の列が必要です。'); return; }
-
-      // 列位置を自動特定（ヘッダー行から）
-      const headers = rows[headerRow].map(c => String(c));
-      const colOrder    = headers.findIndex(h => h.includes('ｵｰﾀﾞｰ') || h.includes('オーダー'));
-      const colSubject  = headers.findIndex(h => h.includes('件名') || h.includes('工事'));
-      const colAssignee = headers.findIndex(h => h.includes('担当'));
-      const colAllowance= headers.findIndex(h => h.includes('日当'));
-
-      if (colOrder === -1) { alert('オーダーNo. 列が見つかりません'); return; }
-
-      const newMaster = {};
-      let count = 0;
-      for (let i = headerRow + 1; i < rows.length; i++) {
-        const row = rows[i];
-        const orderVal = row[colOrder];
-        if (orderVal === '' || orderVal === null || orderVal === undefined) continue;
-        const orderNo = typeof orderVal === 'number'
-          ? Math.round(orderVal).toString()
-          : String(orderVal).trim();
-        if (!orderNo || orderNo === '0') continue;
-
-        const subject  = colSubject  >= 0 ? String(row[colSubject]  || '').trim() : '';
-        const assignee = colAssignee >= 0 ? String(row[colAssignee] || '').trim() : '';
-        const rawAllow = colAllowance >= 0 ? row[colAllowance] : 0;
-        const allowance = typeof rawAllow === 'number' ? Math.round(rawAllow) : (parseInt(rawAllow) || 0);
-
-        newMaster[orderNo] = { subject, assignee, allowance };
-        count++;
-      }
-
-      if (count === 0) { alert('データが見つかりませんでした'); return; }
-      if (!confirm(`${count} 件のオーダーを読み込みます。\n現在のマスターを上書きしますか？`)) return;
-
-      orderMaster = newMaster;
+      const r = parseOrderWorkbook(new Uint8Array(e.target.result));
+      if (!confirm(`${r.count} 件のオーダーを読み込みます。\n現在のマスターを上書きしますか？`)) return;
+      orderMaster = r.master;
       saveOrderMaster();
       renderOrderMaster();
       const status = document.getElementById('importStatus');
-      status.textContent = `✓ ${count} 件を読み込みました`;
+      status.textContent = `✓ ${r.count} 件を読み込みました`;
       status.style.display = 'inline';
       setTimeout(() => { status.style.display = 'none'; }, 4000);
     } catch(err) {
@@ -666,16 +731,239 @@ function importOrderMaster(event) {
   event.target.value = '';
 }
 
+/* ===== オーダー台帳 自動反映（File System Access API） =====
+ * 共有フォルダ上の台帳ハンドルを IndexedDB に永続化し、起動時・タブ復帰時・60秒ごとに
+ * lastModified/size を比較して、変化があったときだけ再パースする。
+ * Chrome/Edge のみ対応。未対応ブラウザでは上の手動インポートをそのまま使う。
+ */
+const LEDGER_DB = 'overtime_ledger', LEDGER_STORE = 'handles', LEDGER_KEY = 'orderLedger';
+const LEDGER_META_KEY = 'overtime_ledger_meta';
+const LEDGER_POLL_MS = 60000;
+let ledgerHandle = null;
+let ledgerState = { status: 'none', message: '', name: '', count: 0, mtime: 0 };
+let ledgerTimer = null;
+
+function ledgerSupported() { return typeof window.showOpenFilePicker === 'function'; }
+
+function ledgerDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(LEDGER_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(LEDGER_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function ledgerIdb(mode, fn) {
+  return ledgerDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(LEDGER_STORE, mode);
+    const req = fn(tx.objectStore(LEDGER_STORE));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+const ledgerSaveHandle = h => ledgerIdb('readwrite', s => s.put(h, LEDGER_KEY));
+const ledgerLoadHandle = () => ledgerIdb('readonly', s => s.get(LEDGER_KEY));
+const ledgerDropHandle = () => ledgerIdb('readwrite', s => s.delete(LEDGER_KEY));
+
+function ledgerMeta(v) {
+  if (v === undefined) return JSON.parse(localStorage.getItem(LEDGER_META_KEY) || '{}');
+  localStorage.setItem(LEDGER_META_KEY, JSON.stringify(v));
+}
+
+/** 台帳を読み込んで取り込む。changedOnly=true なら lastModified/size が変化した時だけ */
+async function ledgerSync(changedOnly) {
+  if (!ledgerHandle) return;
+  let file;
+  try {
+    file = await ledgerHandle.getFile();
+  } catch (err) {
+    ledgerState = { ...ledgerState, status: 'error',
+      message: '台帳ファイルを開けません（共有フォルダに接続できない／移動・削除された可能性）: ' + err.message };
+    renderLedgerLink(); return;
+  }
+  const meta = ledgerMeta();
+  if (changedOnly && meta.mtime === file.lastModified && meta.size === file.size) return;
+  try {
+    const count = applyOrderWorkbook(new Uint8Array(await file.arrayBuffer()));
+    ledgerMeta({ mtime: file.lastModified, size: file.size, name: file.name, count: count });
+    ledgerState = { status: 'linked', message: '', name: file.name, count: count, mtime: file.lastModified };
+  } catch (err) {
+    ledgerState = { ...ledgerState, status: 'error', message: '台帳の解析に失敗しました: ' + err.message };
+  }
+  renderLedgerLink();
+}
+
+/** 権限を確認する。interactive=true のときだけ要求できる（クリックハンドラ内で呼ぶこと） */
+async function ledgerPermission(interactive) {
+  const opt = { mode: 'read' };
+  if ((await ledgerHandle.queryPermission(opt)) === 'granted') return true;
+  if (!interactive) return false;
+  return (await ledgerHandle.requestPermission(opt)) === 'granted';
+}
+
+/** 「共有フォルダの台帳と連携する」: ユーザージェスチャ内から呼ぶこと */
+async function ledgerConnect() {
+  if (!ledgerSupported()) { alert('このブラウザは台帳の自動連携に対応していません。\n手動インポートをご利用ください。'); return; }
+  try {
+    // startIn に UNC パス文字列は渡せない仕様のため指定しない。id で次回以降同じ場所を開く
+    const [h] = await window.showOpenFilePicker({ id: 'orderLedger', multiple: false,
+      types: [{ description: 'オーダー台帳', accept: { 'application/vnd.ms-excel': ['.xls', '.xlsx'] } }] });
+    ledgerHandle = h;
+    await ledgerSaveHandle(h);
+    if (navigator.storage && navigator.storage.persist) await navigator.storage.persist();
+    ledgerMeta({});
+    await ledgerSync(false);
+    ledgerStartPolling();
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;   // ユーザーがキャンセル
+    ledgerState = { ...ledgerState, status: 'error', message: '連携に失敗しました: ' + err.message };
+    renderLedgerLink();
+  }
+}
+
+/** 「台帳に再接続」「今すぐ更新」: ユーザージェスチャ内から呼ぶこと */
+async function ledgerReconnect() {
+  if (!ledgerHandle) { await ledgerConnect(); return; }
+  if (!(await ledgerPermission(true))) {
+    ledgerState = { ...ledgerState, status: 'permission', message: '' };
+    renderLedgerLink(); return;
+  }
+  await ledgerSync(false);
+  ledgerStartPolling();
+}
+
+async function ledgerDisconnect() {
+  if (!confirm('台帳との連携を解除しますか？（取込済みのオーダーは残ります）')) return;
+  ledgerHandle = null;
+  ledgerState = { status: 'none', message: '', name: '', count: 0, mtime: 0 };
+  ledgerMeta({});
+  if (ledgerTimer) { clearInterval(ledgerTimer); ledgerTimer = null; }
+  try { await ledgerDropHandle(); } catch (e) { /* 保存が無くても解除は成立する */ }
+  renderLedgerLink();
+}
+
+function ledgerStartPolling() {
+  if (ledgerTimer) clearInterval(ledgerTimer);
+  ledgerTimer = setInterval(() => ledgerSync(true), LEDGER_POLL_MS);
+}
+
+/** 起動時: 権限要求はできないので queryPermission のみ。granted なら差分同期する */
+async function ledgerRestore() {
+  if (!ledgerSupported()) return;
+  let h;
+  try { h = await ledgerLoadHandle(); } catch (e) { return; }
+  if (!h) return;
+  ledgerHandle = h;
+  const meta = ledgerMeta();
+  ledgerState = { status: 'permission', message: '',
+    name: meta.name || '', count: meta.count || 0, mtime: meta.mtime || 0 };
+  if (await ledgerPermission(false)) {
+    ledgerState.status = 'linked';
+    await ledgerSync(true);
+    ledgerStartPolling();
+  }
+  renderLedgerLink();
+}
+
+function ledgerMtimeText(ms) {
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+    + ` ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderLedgerLink() {
+  const el = document.getElementById('ledgerLink');
+  if (!el) return;
+  const manual = document.getElementById('manualImport');
+  if (!ledgerSupported()) {
+    el.innerHTML = '<div style="font-size:12px;color:#888;">このブラウザは台帳の自動連携に非対応です'
+      + '（Chrome / Edge で利用できます）。下の手動インポートをご利用ください。</div>';
+    if (manual) manual.open = true;   // 未対応ブラウザでは手動取込を最初から開いておく
+    return;
+  }
+  const btn = (label, fn, cls) =>
+    `<button class="btn ${cls || 'btn-info'} btn-sm" style="width:auto;" onclick="${fn}">${label}</button>`;
+  const err = ledgerState.message
+    ? `<div style="font-size:12px;color:#e74c3c;margin-top:6px;">⚠ ${ledgerState.message}</div>` : '';
+  if (ledgerState.status === 'linked') {
+    el.innerHTML = `<div style="font-size:13px;color:#27ae60;font-weight:bold;">✓ ${ledgerState.name}`
+      + ` / ${ledgerState.count}件（台帳更新: ${ledgerMtimeText(ledgerState.mtime)}）</div>`
+      + `<div style="display:flex;gap:8px;margin-top:8px;">${btn('今すぐ更新','ledgerReconnect()')}`
+      + `${btn('連携解除','ledgerDisconnect()','btn-danger')}</div>${err}`;
+  } else if (ledgerState.status === 'permission') {
+    el.innerHTML = '<div style="font-size:13px;color:#e67e22;font-weight:bold;">⚠ 台帳へのアクセス許可が必要です</div>'
+      + `<div style="margin-top:8px;">${btn('台帳に再接続','ledgerReconnect()')}</div>${err}`;
+  } else {
+    el.innerHTML = '<div style="font-size:12px;color:#666;margin-bottom:8px;">'
+      + '共有フォルダの台帳と連携すると、台帳が更新されるたび自動で最新化されます。</div>'
+      + btn('共有フォルダの台帳と連携する', 'ledgerConnect()', 'btn-success') + err;
+  }
+}
+
 // ===== 設定 =====
 const SETTINGS_KEY = 'overtime_settings';
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+
+/* ===== 管理者モード（勤務原価単価の目隠し） =====
+ * 【これはセキュリティ機能ではない】
+ * PIN は DevTools・localStorage の直接編集・sessionStorage の書換えで容易に迂回できる。
+ * 暗号による保護は一切していない（SHA-256 は入力照合のためだけに使っており、単価そのものは
+ * 平文で localStorage に入る）。
+ * 実際に守れている根拠は「従業員端末の localStorage にも出力帳票にも単価が存在しないこと」。
+ * 労務原価は経理・管理部門が旬報上で記入する運用のため、従業員端末に単価を置く必要がない。
+ * PIN は誤操作防止と目隠しにすぎない。
+ *
+ * 【初期PIN = 2580。運用開始時に必ず変更すること】
+ * 変更手順: ブラウザのコンソールで次のワンライナーを実行し、出た16進文字列を
+ *           ADMIN_PIN_SHA256 に貼り替える。
+ *   crypto.subtle.digest('SHA-256', new TextEncoder().encode('新しいPIN'))
+ *     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+ */
+const ADMIN_PIN_SHA256 = 'ed946f65d2c785d90e827c5ffd879ce3b49c68d4c88013074176a7e73bc58bcf';
+const ADMIN_SESSION_KEY = 'overtime_admin_unlocked';
+let adminMode = sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
+
+function isAdmin() { return adminMode; }
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+/** [data-admin-only] の表示切替 */
+function applyAdminVisibility() {
+  document.querySelectorAll('[data-admin-only]').forEach(el => {
+    el.style.display = isAdmin() ? '' : 'none';
+  });
+}
+
+/** ?admin=1 で開いたときだけ PIN を尋ねる */
+async function promptAdminUnlock() {
+  if (isAdmin()) return;
+  if (new URLSearchParams(location.search).get('admin') !== '1') return;
+  if (!window.isSecureContext || !(crypto && crypto.subtle)) {
+    alert('管理者モードは https:// で開いた場合のみ利用できます。');
+    return;
+  }
+  const pin = prompt('管理者PINを入力してください');
+  if (pin === null) return;
+  if (await sha256Hex(pin) !== ADMIN_PIN_SHA256) { alert('PINが違います'); return; }
+  adminMode = true;
+  sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+  applyAdminVisibility();
+  loadSettingsToForm();
+}
 
 function saveSettings() {
   settings = {
     name: document.getElementById('settingName').value,
     empNo: document.getElementById('settingEmpNo').value,
     dept: document.getElementById('settingDept').value,
-    costRate: parseInt(document.getElementById('settingCostRate').value) || 0,
+    // 非管理者時は単価欄をDOMに載せていないため、既存値を維持する（0で潰さない）
+    costRate: isAdmin()
+      ? (parseInt(document.getElementById('settingCostRate').value) || 0)
+      : (settings.costRate || 0),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   const msg = document.getElementById('settingsSaved');
@@ -687,7 +975,8 @@ function loadSettingsToForm() {
   document.getElementById('settingName').value = settings.name || '';
   document.getElementById('settingEmpNo').value = settings.empNo || '';
   document.getElementById('settingDept').value = settings.dept || '';
-  document.getElementById('settingCostRate').value = settings.costRate || '';
+  // 非管理者の端末では単価を DOM にも載せない
+  document.getElementById('settingCostRate').value = isAdmin() ? (settings.costRate || '') : '';
 }
 
 // ===== エントリー管理 =====
@@ -703,7 +992,7 @@ function switchTab(name) {
   document.getElementById(`tab-${name}`).classList.add('active');
   const idx = { overtime: 0, expense: 1, settings: 2 }[name];
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
-  if (name === 'settings') { loadSettingsToForm(); renderOrderMaster(); }
+  if (name === 'settings') { promptAdminUnlock(); loadSettingsToForm(); renderOrderMaster(); renderLedgerLink(); }
   if (name === 'expense') {
     const today = new Date();
     const ym = document.getElementById('junMonth');
@@ -847,6 +1136,34 @@ function calcCombinedOvertime(v) {
   };
 }
 
+/** 保存済みエントリーの残業時間を現在の計算ロジックで再計算する。
+ *  残業時間は登録時に確定してlocalStorageへ保存するため、ロジック修正だけでは既存データが直らない。
+ *  毎回起動時に実行し、差分があった時のみ保存して利用者に通知する（差分が無ければ何もしない）。 */
+const RECALC_FIELDS = ['mainRegular', 'mainLateNight', 'returnRegular', 'returnLateNight',
+  'regular', 'lateNight', 'lateNightAllowance'];
+
+function recalcStoredOvertime() {
+  const fixed = [];
+  for (const e of entries) {
+    // 時刻が欠けた壊れたデータは、空文字が 0:00 と解釈されて過大な値になるため再計算しない
+    if (hasOvertimeCategory(e.workCategory) && (!e.start || !e.end)) continue;
+    const r = calcCombinedOvertime(e);
+    if (!RECALC_FIELDS.some(k => (e[k] || 0) !== r[k])) continue;
+    const diffs = [['普通残業', 'regular', '時間'], ['深夜残業', 'lateNight', '時間'],
+      ['深夜作業手当', 'lateNightAllowance', '円']]
+      .filter(([, k]) => (e[k] || 0) !== r[k])
+      .map(([label, k, unit]) => `${label} ${e[k] || 0}→${r[k]}${unit}`);
+    fixed.push(`${e.date}　${e.name}　${diffs.join('／')}`);
+    for (const k of RECALC_FIELDS) e[k] = r[k];
+  }
+  if (!fixed.length) return;
+  saveEntries();
+  const shown = fixed.slice(0, 10).join('\n');
+  const rest = fixed.length > 10 ? `\n…ほか${fixed.length - 10}件` : '';
+  alert(`残業時間の計算の誤りを修正したため、登録済み${fixed.length}件を正しい値に直しました。\n\n`
+    + shown + rest + '\n\n未提出の分は、この値で提出してください。');
+}
+
 // ===== プレビュー更新 =====
 function updatePreview() {
   const v = getFormValues();
@@ -875,19 +1192,62 @@ function updatePreview() {
   }
 }
 
-// 初期表示
-document.getElementById('returnWorkSection').style.display = 'block';
-updatePreview();
-renderEntries();
-updateSummary();
+/** 初期表示（const 定義がすべて初期化された後、スクリプト末尾から呼ぶ） */
+function initApp() {
+  const t = new Date();
+  const ym = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}`;
+  const jun = getJun(`${ym}-${String(t.getDate()).padStart(2,'0')}`);
+  document.getElementById('otMonth').value = ym;
+  document.getElementById('otJun').value = jun;
+  document.getElementById('junMonth').value = ym;
+  document.getElementById('junSelect').value = jun;
+  document.getElementById('returnWorkSection').style.display = 'block';
+  updatePreview();
+  recalcStoredOvertime();
+  renderEntries();
+  updateSummary();
+  applyAdminVisibility();
+  renderLedgerLink();
+  ledgerRestore();
+  // タブ復帰時にも差分を取りに行く（ポーリングとの二段構え）
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ledgerSync(true); });
+}
 
 // ===== 編集状態管理 =====
 let editingId = null;
 
+/**
+ * 入力フォームを初期状態へ戻す。
+ * 残すのは 氏名・社員番号・日付・作業開始/終了（次の登録でそのまま使うため、従来の挙動を踏襲）。
+ * それ以外（帰社後作業のチェックと時刻・勤務区分・作業区分・旅費欄）は必ず初期化する。
+ * これを怠ると前回の帰社後作業を引き継いで残業時間が過大になる。
+ */
+function resetEntryForm() {
+  ['inputOrder','inputSubject','inputReturnOrder','inputReturnSubject',
+   'inputTransportType','inputTransportRoute','inputTransportAmount',
+   'inputAccommodation','inputRemarks'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('inputDailyAllowance').value = '0';
+  document.getElementById('inputReturnStart').value = '20:00';
+  document.getElementById('inputReturnEnd').value = '22:00';
+  const cb = document.getElementById('hasReturnWork');
+  cb.checked = false;
+  cb.dispatchEvent(new Event('change'));
+  [['workCategory', 'regular'], ['workType', 'onsite'], ['tripType', 'oneway']].forEach(([n, v]) => {
+    const r = document.querySelector(`input[name="${n}"][value="${v}"]`);
+    if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
+  });
+  updatePreview();
+}
+
+/** 編集モード解除＋フォーム初期化。登録・更新・キャンセルの全経路がここを通る */
 function cancelEdit() {
   editingId = null;
   document.getElementById('addEntryBtn').textContent = 'この内容を追加';
   document.getElementById('editModeBanner').style.display = 'none';
+  resetEntryForm();
 }
 
 function editEntry(id) {
@@ -975,7 +1335,6 @@ function addEntry() {
   if (editingId !== null) {
     const idx = entries.findIndex(e => e.id === editingId);
     if (idx !== -1) entries[idx] = { id: editingId, ...entryData };
-    cancelEdit();
   } else {
     entries.push({ id: Date.now(), ...entryData });
   }
@@ -983,13 +1342,7 @@ function addEntry() {
   saveEntries();
   renderEntries();
   updateSummary();
-  ['inputOrder','inputSubject','inputReturnOrder','inputReturnSubject',
-   'inputTransportType','inputTransportRoute','inputTransportAmount',
-   'inputAccommodation','inputRemarks'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('inputDailyAllowance').value = '0';
+  cancelEdit();   // 新規登録・更新のどちらもフォーム初期化まで同じ経路を通す
 }
 
 function deleteEntry(id) {
@@ -1003,6 +1356,84 @@ function clearAllData() {
   saveEntries(); renderEntries(); updateSummary();
 }
 
+/* ===== バックアップ / 復元 =====
+ * 対象は作業データと設定のみ。オーダーマスターは台帳が真実の源であり、
+ * 台帳連携または再インポートで復元できるため含めない（単一性の原則）。
+ * settings.costRate も含めない。「単価は従業員端末に存在しない」ことが秘匿の唯一の根拠であり、
+ * 管理者端末で取ったバックアップを従業員が復元すると、その根拠が崩れるため。
+ * 管理者は復元後に管理者モードで単価を入力し直す（数値ひとつなので運用負荷は無い）。
+ */
+const BACKUP_FORMAT = 'overtime-backup';
+const BACKUP_VERSION = 1;
+
+function showBackupStatus(text, color) {
+  const el = document.getElementById('backupStatus');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = color;
+  el.style.display = 'block';
+}
+
+function exportBackup() {
+  const payload = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    entries: entries,
+    settings: { name: settings.name || '', empNo: settings.empNo || '', dept: settings.dept || '' },
+  };
+  const t = new Date();
+  const ymd = `${t.getFullYear()}${String(t.getMonth()+1).padStart(2,'0')}${String(t.getDate()).padStart(2,'0')}`;
+  const who = (settings.name || '').replace(/[\\/:*?"<>|]/g, '_');
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = who ? `旬報バックアップ_${who}_${ymd}.json` : `旬報バックアップ_${ymd}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showBackupStatus(`✓ ${entries.length} 件をバックアップしました（${a.download}）`, '#27ae60');
+}
+
+/** バックアップJSONを検証して返す。不正なら Error を投げる（握り潰さない） */
+function parseBackup(text) {
+  let data;
+  try { data = JSON.parse(text); } catch (e) { throw new Error('JSONとして読めません（ファイルが壊れています）'); }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('バックアップ形式ではありません');
+  if (data.format !== BACKUP_FORMAT) throw new Error('このアプリのバックアップファイルではありません');
+  if (data.version !== BACKUP_VERSION) throw new Error(`未対応のバージョンです（version: ${data.version}）`);
+  if (!Array.isArray(data.entries)) throw new Error('作業データが含まれていません');
+  return data;
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let data;
+    try {
+      data = parseBackup(e.target.result);
+    } catch (err) {
+      showBackupStatus('⚠ 復元できません: ' + err.message, '#e74c3c');
+      alert('復元できません: ' + err.message);
+      return;
+    }
+    if (!confirm(`現在のデータ（${entries.length}件）を、バックアップの内容（${data.entries.length}件）で`
+      + '置き換えます。この操作は取り消せません。よろしいですか？')) return;
+    entries = data.entries;
+    saveEntries();
+    if (data.settings && typeof data.settings === 'object') {
+      // costRate はバックアップに含まれない。この端末の既存値を維持する
+      settings = Object.assign({}, data.settings, { costRate: settings.costRate || 0 });
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+    renderEntries(); updateSummary(); updateExportSummary(); loadSettingsToForm();
+    showBackupStatus(`✓ ${entries.length} 件を復元しました`, '#27ae60');
+  };
+  reader.readAsText(file);
+}
+
 // ===== エントリー一覧表示 =====
 function renderEntries() {
   const list = document.getElementById('entriesList');
@@ -1012,8 +1443,8 @@ function renderEntries() {
   }
   const sorted = [...entries].sort((a,b) => a.date.localeCompare(b.date));
   list.innerHTML = sorted.map(e => {
-    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
-    const expenseTotal = (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0);
+    const cat = catOf(e);
+    const expenseTotal = expenseSubtotal(e);
     return `
     <div class="entry-item">
       <div class="entry-header">
@@ -1073,7 +1504,8 @@ function renderEntries() {
 
 function updateSummary() {
   const card = document.getElementById('summaryCard');
-  const overtime = entries.filter(e => hasOvertimeCategory(e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular')));
+  const overtime = entries.filter(e => hasOvertimeCategory(catOf(e)));
+  updateExportSummary();
   if (overtime.length === 0) { card.style.display = 'none'; return; }
   card.style.display = 'block';
   document.getElementById('totalCount').textContent = overtime.length;
@@ -1096,7 +1528,9 @@ function getJun(dateStr) {
   if (day <= 20) return 'mid';
   return 'lower';
 }
-const JUN_LABELS = { upper: '上旬', mid: '中旬', lower: '下旬', all: '全期間' };
+const JUN_LABELS = { upper: '一旬', mid: '二旬', lower: '三旬', all: '全期間' };
+// オーダー番号が空の行の表示名（画面・旬報Excelで共通）
+const NO_ORDER_LABEL = '（オーダー番号なし）';
 
 // ===== 旬報タブ表示 =====
 function renderExpenseTab() {
@@ -1120,8 +1554,8 @@ function renderExpenseTab() {
 
   // 明細テーブル
   const rows = filtered.map(e => {
-    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
-    const subtotal = (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0);
+    const cat = catOf(e);
+    const subtotal = expenseSubtotal(e);
     return `<tr>
       <td>${formatDate(e.date)}</td>
       <td>${e.order || ''}</td>
@@ -1146,22 +1580,28 @@ function renderExpenseTab() {
   // オーダー別集計
   const byOrder = {};
   filtered.forEach(e => {
-    const key = e.order || '（オーダーなし）';
-    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', days: 0, transport: 0, allowance: 0 };
-    byOrder[key].days++;
+    // オーダー番号が空でも金額があれば計上する（除外すると明細の合計と一致しなくなる）
+    const key = String(e.order || '').trim() || NO_ORDER_LABEL;
+    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', dates: {}, transport: 0, allowance: 0 };
+    // 日数は「常用・休出の日付ユニーク数」（同日を複数エントリーに分けても1日、有給・代休は除外）
+    if (hasOvertimeCategory(catOf(e))) byOrder[key].dates[e.date] = 1;
     byOrder[key].transport += e.transportAmount || 0;
     byOrder[key].allowance += e.dailyAllowance || 0;
   });
+  // 単価が無い端末では「勤務原価」列そのものを出さない（単価の存在を知らせない）
   const costRate = settings.costRate || 0;
   const orderRows = Object.entries(byOrder).map(([order, d]) => {
-    const cost = d.days * costRate;
+    d.days = Object.keys(d.dates).length;
+    return [order, d];
+  }).filter(([, d]) => d.days > 0 || (d.transport + d.allowance) !== 0)   // 日数0かつ金額0の行だけ落とす
+    .map(([order, d]) => {
     return `<tr>
       <td>${order}</td>
       <td>${d.subject}</td>
       <td style="text-align:right;">${d.days}日</td>
       <td style="text-align:right;">${d.transport.toLocaleString()}円</td>
       <td style="text-align:right;">${d.allowance.toLocaleString()}円</td>
-      <td style="text-align:right;">${costRate > 0 ? cost.toLocaleString() + '円' : '—'}</td>
+      ${costRate > 0 ? `<td style="text-align:right;">${(d.days * costRate).toLocaleString()}円</td>` : ''}
     </tr>`;
   }).join('');
 
@@ -1169,7 +1609,7 @@ function renderExpenseTab() {
   content.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:14px;font-weight:bold;color:#1a3a5c;">
-        令和${reiwa}年${m}月 ${JUN_LABELS[jun]}　${settings.name || ''}　${settings.dept || ''}
+        令和${reiwa}年${m}月 ${JUN_LABELS[jun]}　${uniqueNames(filtered).join('・')}　${settings.dept || ''}
       </div>
       <button class="btn btn-success btn-sm" style="width:auto;" onclick="exportExpenseExcel()">
         旬報 Excel ダウンロード
@@ -1197,150 +1637,492 @@ function renderExpenseTab() {
     <div style="overflow-x:auto;">
       <table class="expense-table">
         <thead><tr>
-          <th>オーダー番号</th><th>件名</th><th>日数</th><th>交通費</th><th>日当</th><th>勤務原価</th>
+          <th>オーダー番号</th><th>件名</th><th>日数</th><th>交通費</th><th>日当</th>${costRate > 0 ? '<th>勤務原価</th>' : ''}
         </tr></thead>
         <tbody>${orderRows}</tbody>
       </table>
     </div>
-    ${costRate === 0 ? '<p style="font-size:12px;color:#888;margin-top:8px;">※ 勤務原価を表示するには設定タブで単価を登録してください</p>' : ''}
   `;
 }
 
+// ===== Excel 共通ヘルパ（罫線・塗り・印刷設定） =====
+const XLS_FONT = 'ＭＳ Ｐゴシック';
+const BD_T = { style: 'thin', color: { rgb: 'FF000000' } };
+const BD_M = { style: 'medium', color: { rgb: 'FF000000' } };
+const B_GRID = { top: BD_T, bottom: BD_T, left: BD_T, right: BD_T };
+const B_BOX  = { top: BD_M, bottom: BD_M, left: BD_M, right: BD_M };
+const FILL_PINK = { patternType: 'solid', fgColor: { rgb: 'FFFF99CC' } };
+const FILL_BLUE = { patternType: 'solid', fgColor: { rgb: 'FFD9E1F2' } };
+const FILL_GRAY = { patternType: 'solid', fgColor: { rgb: 'FFC0C0C0' } };
+const AL_C = { horizontal: 'center', vertical: 'center' };
+const AL_R = { horizontal: 'right', vertical: 'center' };
+const AL_L = { horizontal: 'left', vertical: 'center' };
+// 件名・工事名など長文が入る列用。wrapText が無いと隣接セルが埋まっている行で Excel が文字をクリップする
+const AL_LW = { horizontal: 'left', vertical: 'center', wrapText: true };
+const NF_YEN = '#,##0';
+const NF_HOUR = '0.0';
+
+/** スタイル生成（和文フォントを必ず付与。未指定だとCalibriになる） */
+function xS(o) {
+  const s = Object.assign({}, o || {});
+  s.font = Object.assign({ name: XLS_FONT, sz: 10 }, s.font || {});
+  return s;
+}
+/** 罫線を組む。edge に 'l','r','t','b' を含めるとその辺だけ medium */
+function xB(edge) {
+  edge = edge || '';
+  return { top: edge.indexOf('t') >= 0 ? BD_M : BD_T, bottom: edge.indexOf('b') >= 0 ? BD_M : BD_T,
+    left: edge.indexOf('l') >= 0 ? BD_M : BD_T, right: edge.indexOf('r') >= 0 ? BD_M : BD_T };
+}
+/** 表の外周を medium で閉じるための辺記号を返す */
+function xEdge(c, cLast, isTop, isBottom) {
+  return (c === 0 ? 'l' : '') + (c === cLast ? 'r' : '') + (isTop ? 't' : '') + (isBottom ? 'b' : '');
+}
+/** 値セル。空セルは t:'z' だと出力から消えるので必ず v:'' の文字列セルにする */
+function xC(v, s) {
+  if (v === null || v === undefined) v = '';
+  return { v: v, t: (typeof v === 'number') ? 'n' : 's', s: s };
+}
+function xPut(ws, r, c, v, s) { ws[XLSX.utils.encode_cell({ r: r, c: c })] = xC(v, s); }
+function xFill(ws, r, c0, c1, s) { for (let c = c0; c <= c1; c++) xPut(ws, r, c, '', s); }
+function xMerge(ws, r0, c0, r1, c1) {
+  (ws['!merges'] = ws['!merges'] || []).push({ s: { r: r0, c: c0 }, e: { r: r1, c: c1 } });
+}
+function xFinish(ws, lastRow, lastCol, widths) {
+  ws['!ref'] = 'A1:' + XLSX.utils.encode_cell({ r: lastRow, c: lastCol });
+  ws['!cols'] = widths.map(w => ({ wch: w }));
+  ws['!margins'] = { left: 0.31, right: 0.31, top: 0.39, bottom: 0.39, header: 0.2, footer: 0.2 };
+  return ws;
+}
+
+/** 印刷設定を xlsx バイナリに後注入（ws['!pageSetup'] は無効なため） */
+const XLS_ENC = new TextEncoder(), XLS_DEC = new TextDecoder('utf-8');
+function injectPageSetup(u8) {
+  const CFB = XLSX.CFB;
+  const cfb = CFB.read(u8, { type: 'array' });
+  cfb.FullPaths.forEach((fp, i) => {
+    if (!/xl\/worksheets\/sheet\d+\.xml$/.test(fp)) return;
+    let xml = XLS_DEC.decode(new Uint8Array(cfb.FileIndex[i].content));
+    if (!/<sheetPr[ >]/.test(xml))
+      xml = xml.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+    const ps = '<pageSetup paperSize="9" orientation="landscape" scale="100" fitToWidth="1" fitToHeight="1"/>';
+    if (/<pageMargins[^>]*\/>/.test(xml)) xml = xml.replace(/(<pageMargins[^>]*\/>)/, '$1' + ps);
+    else xml = xml.replace(/<\/worksheet>/, '<pageMargins left="0.31" right="0.31" top="0.39" ' +
+      'bottom="0.39" header="0.2" footer="0.2"/>' + ps + '</worksheet>');
+    xml = xml.replace(/(<pageMargins)/, '<printOptions horizontalCentered="1"/>$1');
+    CFB.utils.cfb_add(cfb, fp, XLS_ENC.encode(xml));
+  });
+  return CFB.write(cfb, { type: 'array', fileType: 'zip', compression: true });
+}
+
+/** スタイル付きブックを書き出して印刷設定を注入しダウンロード。失敗は隠さず通知する */
+function downloadBook(wb, filename) {
+  let fixed;
+  try {
+    fixed = injectPageSetup(new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' })));
+  } catch (err) {
+    alert('Excelの生成に失敗しました。出力を中止します。\n' + (err && err.message ? err.message : err));
+    throw err;
+  }
+  const url = URL.createObjectURL(new Blob([new Uint8Array(fixed)], { type: 'application/octet-stream' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ===== 出力対象の共通ロジック =====
+const JUN_RANGE = { upper: [1, 10], mid: [11, 20], lower: [21, 31] };
+const JUN_ORDER = ['upper', 'mid', 'lower'];
+
+/** 勤務区分（レガシー dayType 互換フォールバックを温存） */
+function catOf(e) { return e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular'); }
+/** 画面表示用の旅費小計（宿泊費を含む）。旬報Excelは junpoSubtotal を使うこと */
+function expenseSubtotal(e) { return (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0); }
+/** 旬報Excel用の小計。出力12列（日当・交通費）と横計が一致するよう宿泊費を含めない */
+function junpoSubtotal(e) { return (e.dailyAllowance || 0) + (e.transportAmount || 0); }
+function junDays(y, m, jun) {
+  const last = new Date(y, m, 0).getDate();
+  const r = JUN_RANGE[jun];
+  return [r[0], Math.min(r[1], last)];
+}
+function periodText(y, m, jun) {
+  const d = junDays(y, m, jun);
+  return `令和${y - 2018}年${m}月 ${JUN_LABELS[jun]}（${m}/${d[0]}〜${m}/${d[1]}）`;
+}
+function mdText(dateStr) { const p = String(dateStr || '').split('-'); return p.length < 3 ? '' : `${+p[1]}/${+p[2]}`; }
+function ymdText(y, m, d) { return `${y}/${m}/${d}`; }
+function filterByPeriod(list, month, jun) {
+  return list.filter(e => e.date && e.date.startsWith(month) && (jun === 'all' || getJun(e.date) === jun))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+function periodSuffix(y, m, jun) {
+  return jun === 'all' ? `令和${y - 2018}年${m}月` : `令和${y - 2018}年${m}月${JUN_LABELS[jun]}`;
+}
+function uniqueNames(list) { return list.map(e => e.name).filter((v, i, a) => a.indexOf(v) === i); }
+/** 出力対象の年月・旬を読み取る。未選択なら null */
+function readExportPeriod(monthId, junId) {
+  const month = document.getElementById(monthId).value;
+  const jun = document.getElementById(junId).value;
+  if (!month) { alert('出力対象の年月を選択してください'); return null; }
+  const ym = month.split('-').map(Number);
+  return { month: month, jun: jun, y: ym[0], m: ym[1] };
+}
+/** シート名: 禁止文字は除去せず _ に置換（別人が同名シートになるのを防ぐ） */
+function otSheetName(name, junLabel, used) {
+  const clean = String(name || '無記名').replace(/[\[\]:*?\/\\]/g, '_');
+  const base = clean.slice(0, 30 - junLabel.length) + '_' + junLabel;
+  let n = base, i = 2;
+  while (used[n]) { n = base.slice(0, 28) + '_' + i; i++; }
+  used[n] = 1;
+  return n;
+}
+
+/** 出力対象UIの直下に、その期間の該当件数と合計を表示する（サマリーカードは全登録分） */
+function updateExportSummary() {
+  const el = document.getElementById('exportSummary');
+  if (!el) return;
+  const month = document.getElementById('otMonth').value;
+  if (!month) { el.textContent = '出力対象の年月を選択してください'; return; }
+  const jun = document.getElementById('otJun').value;
+  const t = filterByPeriod(entries.filter(e => hasOvertimeCategory(catOf(e))), month, jun);
+  const sum = f => Math.round(t.reduce((s, e) => s + (f(e) || 0), 0) * 10) / 10;
+  el.textContent = `出力対象（${JUN_LABELS[jun]}）: ${t.length}件 / 普通残業 ${sum(e => e.regular).toFixed(1)}H`
+    + ` / 深夜残業 ${sum(e => e.lateNight).toFixed(1)}H`
+    + ` / 深夜作業手当 ${t.reduce((s, e) => s + (e.lateNightAllowance || 0), 0).toLocaleString()}円`;
+}
+
 // ===== 残業報告書 Excel =====
+const OT_HEAD = ['区分', '勤務区分', '日付', 'オーダー №', '件名', '作業開始', '作業終了',
+  '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)'];
+const OT_COLW = [10, 10, 10, 14, 30, 12, 12, 12, 12, 12];
+const OT_NUMF = { 7: NF_HOUR, 8: NF_HOUR, 9: NF_YEN };
+const OT_WRAP_COL = 4;      // 件名列（長文が入るため折返し）
+
+/** 明細行（帰社後作業は別行）。深夜作業手当は列に穴が空かないよう常に数値 */
+function otDetailRows(items) {
+  const rows = [];
+  items.forEach(e => {
+    const cat = catOf(e);
+    rows.push([e.workType === 'onsite' ? '現場作業' : '社内作業', CAT_LABELS[cat] || cat, mdText(e.date),
+      e.order || '', e.subject || '', e.start || '', e.end || '',
+      e.mainRegular || 0, e.mainLateNight || 0, e.lateNightAllowance || 0]);
+    if (e.hasReturnWork) rows.push(['帰社後作業', CAT_LABELS[cat] || cat, mdText(e.date),
+      e.returnOrder || '', e.returnSubject || '', e.returnStart || '', e.returnEnd || '',
+      e.returnRegular || 0, e.returnLateNight || 0, 0]);
+  });
+  return rows;
+}
+
+/** 行1〜7: タイトル・確認欄（押印枠4個）・期間・報告者 */
+function otSheetHead(ws, name, empNo, y, m, jun) {
+  const titleS = xS({ font: { sz: 16, bold: true }, alignment: AL_C });
+  const boxS = xS({ border: B_BOX, alignment: AL_C });
+  const plain = xS({ alignment: AL_L });
+  xPut(ws, 0, 0, '時間外作業報告書', titleS); xFill(ws, 0, 1, 5, titleS);
+  xPut(ws, 0, 6, '確 認 欄', xS({ border: B_BOX, alignment: AL_C })); xFill(ws, 0, 7, 9, boxS);
+  xPut(ws, 1, 0, '下記のとおり時間外作業を報告します。', plain); xFill(ws, 1, 1, 5, plain);
+  xMerge(ws, 0, 0, 0, 5); xMerge(ws, 0, 6, 0, 9); xMerge(ws, 1, 0, 1, 5);
+  for (let c = 6; c <= 9; c++) {
+    for (let r = 1; r <= 4; r++) xPut(ws, r, c, '', boxS);
+    xMerge(ws, 1, c, 4, c);
+  }
+  xPut(ws, 6, 0, '期間', plain);
+  xPut(ws, 6, 1, periodText(y, m, jun), plain); xFill(ws, 6, 2, 3, plain); xMerge(ws, 6, 1, 6, 3);
+  // 氏名は2列結合＋折返しにして、長い氏名が社員番号欄へはみ出さないようにする
+  const nameS = xS({ alignment: { horizontal: 'left', vertical: 'center', wrapText: true } });
+  xPut(ws, 6, 5, '報告者氏名', plain);
+  xPut(ws, 6, 6, name, nameS); xPut(ws, 6, 7, '', nameS); xMerge(ws, 6, 6, 6, 7);
+  xPut(ws, 6, 8, '社員番号', plain); xPut(ws, 6, 9, empNo, plain);
+}
+
+/** 氏名×旬 の帳票シート（確認欄・押印枠4個つき） */
+function buildOvertimeSheet(name, items, y, m, jun) {
+  const ws = {};
+  otSheetHead(ws, name, (items[0] && items[0].empNo) || '', y, m, jun);
+  OT_HEAD.forEach((h, c) => xPut(ws, 8, c, h, xS({
+    font: { bold: true }, fill: FILL_BLUE, border: xB(xEdge(c, 9, true, false)),
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+  })));
+  // 行10〜: 明細（最低15行の枠を確保。外周は medium で閉じる）
+  const rows = otDetailRows(items);
+  const n = Math.max(15, rows.length);
+  for (let i = 0; i < n; i++) for (let c = 0; c < 10; c++) {
+    const v = rows[i] ? rows[i][c] : '';
+    xPut(ws, 9 + i, c, v, xS({ border: xB(xEdge(c, 9, false, false)),
+      alignment: c === OT_WRAP_COL ? AL_LW : (typeof v === 'number' ? AL_R : AL_C), numFmt: OT_NUMF[c] }));
+  }
+  // 合計行
+  const tr = 9 + n;
+  const sum = f => Math.round(items.reduce((s, e) => s + (f(e) || 0), 0) * 10) / 10;
+  for (let c = 0; c < 10; c++) xPut(ws, tr, c, '', xS({
+    font: { bold: true }, border: xB(xEdge(c, 9, true, true)), alignment: AL_C }));
+  xPut(ws, tr, 6, '合計', xS({ font: { bold: true }, border: xB('tb'), alignment: AL_C }));
+  [7, 8, 9].forEach(c => xPut(ws, tr, c, sum(e => c === 7 ? e.regular : c === 8 ? e.lateNight : e.lateNightAllowance),
+    xS({ font: { bold: true }, border: xB(xEdge(c, 9, true, true)), alignment: AL_R, numFmt: OT_NUMF[c] })));
+  ws['!rows'] = [{ hpt: 26 }, null, null, null, null, null, { hpt: 28 }, null, { hpt: 30 }];
+  return xFinish(ws, tr, 9, OT_COLW);
+}
+
+/** 一覧シート（従来どおりの列構成。罫線・見出し塗り・合計行つき） */
+function buildOvertimeList(list) {
+  const ws = {}, head = ['日付', '報告者氏名', '社員番号', '区分', '勤務区分', 'オーダー №', '件名',
+    '開始', '終了', '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)'];
+  const nf = { 9: NF_HOUR, 10: NF_HOUR, 11: NF_YEN };
+  head.forEach((h, c) => xPut(ws, 0, c, h, xS({ font: { bold: true }, fill: FILL_BLUE,
+    border: xB(xEdge(c, 11, true, false)), alignment: { horizontal: 'center', vertical: 'center', wrapText: true } })));
+  const rows = [];
+  list.forEach(e => {
+    const cat = catOf(e);
+    rows.push([mdText(e.date), e.name, e.empNo || '', e.workType === 'onsite' ? '現場作業' : '社内作業',
+      CAT_LABELS[cat] || cat, e.order || '', e.subject || '', e.start || '', e.end || '',
+      e.mainRegular || 0, e.mainLateNight || 0, e.lateNightAllowance || 0]);
+    if (e.hasReturnWork) rows.push([mdText(e.date), e.name, e.empNo || '', '帰社後作業', CAT_LABELS[cat] || cat,
+      e.returnOrder || '', e.returnSubject || '', e.returnStart || '', e.returnEnd || '',
+      e.returnRegular || 0, e.returnLateNight || 0, 0]);
+  });
+  rows.forEach((row, i) => row.forEach((v, c) => xPut(ws, 1 + i, c, v,
+    xS({ border: xB(xEdge(c, 11, false, false)), numFmt: nf[c],
+      alignment: c === 6 ? AL_LW : (typeof v === 'number' ? AL_R : AL_C) }))));   // c=6: 件名
+  const tr = 1 + rows.length;
+  const sum = f => Math.round(list.reduce((s, e) => s + (f(e) || 0), 0) * 10) / 10;
+  for (let c = 0; c < 12; c++) xPut(ws, tr, c, '', xS({
+    font: { bold: true }, border: xB(xEdge(c, 11, true, true)), alignment: AL_C }));
+  xPut(ws, tr, 8, '合計', xS({ font: { bold: true }, border: xB('tb'), alignment: AL_C }));
+  const pick = { 9: e => e.regular, 10: e => e.lateNight, 11: e => e.lateNightAllowance };
+  [9, 10, 11].forEach(c => xPut(ws, tr, c, sum(pick[c]),
+    xS({ font: { bold: true }, border: xB(xEdge(c, 11, true, true)), alignment: AL_R, numFmt: nf[c] })));
+  return xFinish(ws, tr, 11, [10, 14, 12, 10, 8, 14, 24, 10, 10, 12, 12, 16]);
+}
+
 function exportOvertimeExcel() {
-  const overtime = entries.filter(e => hasOvertimeCategory(e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular')));
-  if (overtime.length === 0) { alert('残業データがありません'); return; }
+  const p = readExportPeriod('otMonth', 'otJun');
+  if (!p) return;
+  const target = filterByPeriod(entries.filter(e => hasOvertimeCategory(catOf(e))), p.month, p.jun);
+  if (target.length === 0) { alert('該当する残業データがありません'); return; }
+
   const wb = XLSX.utils.book_new();
-  const byName = {};
-  overtime.forEach(e => { if (!byName[e.name]) byName[e.name] = []; byName[e.name].push(e); });
-
-  Object.entries(byName).forEach(([name, items]) => {
-    const wsData = [];
-    wsData.push(['時間外作業報告書']);
-    wsData.push(['下記のとおり時間外作業を報告します。']);
-    wsData.push(['']);
-    const fd = new Date(items[0].date + 'T00:00:00');
-    const ry = fd.getFullYear() - 2018;
-    wsData.push(['日付', `令和　${ry}年`, `${fd.getMonth()+1}月`, `${fd.getDate()}日`, '', '報告者氏名', name, '', '社員番号', items[0].empNo || '']);
-    wsData.push(['']);
-    wsData.push(['区分', '勤務区分', '日付', 'オーダー №', '件名', '作業開始', '作業終了', '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)']);
-    items.forEach(e => {
-      const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
-      wsData.push([e.workType === 'onsite' ? '現場作業' : '社内作業', CAT_LABELS[cat], e.date, e.order, e.subject, e.start, e.end, e.mainRegular, e.mainLateNight, e.lateNightAllowance || 0]);
-      if (e.hasReturnWork) wsData.push(['帰社後作業', CAT_LABELS[cat], e.date, e.returnOrder, e.returnSubject, e.returnStart, e.returnEnd, e.returnRegular, e.returnLateNight, '']);
+  const used = {};
+  (p.jun === 'all' ? JUN_ORDER : [p.jun]).forEach(j => {
+    const inJun = target.filter(e => getJun(e.date) === j);
+    uniqueNames(inJun).forEach(nm => {
+      XLSX.utils.book_append_sheet(wb, buildOvertimeSheet(nm, inJun.filter(e => e.name === nm), p.y, p.m, j),
+        otSheetName(nm, JUN_LABELS[j], used));
     });
-    wsData.push(['']);
-    wsData.push(['','','','','','','合計', Math.round(items.reduce((s,e)=>s+e.regular,0)*10)/10, Math.round(items.reduce((s,e)=>s+e.lateNight,0)*10)/10, items.reduce((s,e)=>s+(e.lateNightAllowance||0),0)]);
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{wch:10},{wch:8},{wch:14},{wch:14},{wch:24},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
-    XLSX.utils.book_append_sheet(wb, ws, name.substring(0,20) || 'Sheet1');
   });
-
-  // 一覧シート
-  const listData = [['日付','報告者氏名','社員番号','区分','勤務区分','オーダー №','件名','開始','終了','普通残業(H)','深夜残業(H)','深夜作業手当(円)']];
-  overtime.forEach(e => {
-    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
-    listData.push([e.date, e.name, e.empNo||'', e.workType==='onsite'?'現場作業':'社内作業', CAT_LABELS[cat], e.order, e.subject, e.start, e.end, e.mainRegular, e.mainLateNight, e.lateNightAllowance||0]);
-    if (e.hasReturnWork) listData.push([e.date, e.name, e.empNo||'', '帰社後作業', CAT_LABELS[cat], e.returnOrder, e.returnSubject, e.returnStart, e.returnEnd, e.returnRegular, e.returnLateNight, '']);
-  });
-  listData.push(['','','','','','','','','合計', Math.round(overtime.reduce((s,e)=>s+e.regular,0)*10)/10, Math.round(overtime.reduce((s,e)=>s+e.lateNight,0)*10)/10, overtime.reduce((s,e)=>s+(e.lateNightAllowance||0),0)]);
-  const wsList = XLSX.utils.aoa_to_sheet(listData);
-  wsList['!cols'] = [{wch:14},{wch:14},{wch:12},{wch:10},{wch:8},{wch:14},{wch:24},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, wsList, '一覧');
-
-  const today = new Date();
-  XLSX.writeFile(wb, `時間外作業報告書_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, buildOvertimeList(target), '一覧');
+  downloadBook(wb, `時間外作業報告書_${periodSuffix(p.y, p.m, p.jun)}.xlsx`);
 }
 
 // ===== 残業報告書 CSV =====
 function exportOvertimeCSV() {
-  const overtime = entries.filter(e => hasOvertimeCategory(e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular')));
-  if (overtime.length === 0) { alert('残業データがありません'); return; }
-  const header = ['日付','報告者氏名','社員番号','区分','勤務区分','オーダーNo','件名','開始','終了','普通残業(H)','深夜残業(H)','深夜作業手当(円)'];
-  const rows = [header];
-  overtime.forEach(e => {
-    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
-    rows.push([e.date, e.name, e.empNo||'', e.workType==='onsite'?'現場作業':'社内作業', CAT_LABELS[cat], e.order||'', e.subject||'', e.start, e.end, e.mainRegular, e.mainLateNight, e.lateNightAllowance||0]);
-    if (e.hasReturnWork) rows.push([e.date, e.name, e.empNo||'', '帰社後作業', CAT_LABELS[cat], e.returnOrder||'', e.returnSubject||'', e.returnStart, e.returnEnd, e.returnRegular, e.returnLateNight, '']);
+  const p = readExportPeriod('otMonth', 'otJun');
+  if (!p) return;
+  const target = filterByPeriod(entries.filter(e => hasOvertimeCategory(catOf(e))), p.month, p.jun);
+  if (target.length === 0) { alert('該当する残業データがありません'); return; }
+  const rows = [['日付', '報告者氏名', '社員番号', '区分', '勤務区分', 'オーダーNo', '件名', '開始', '終了',
+    '普通残業(H)', '深夜残業(H)', '深夜作業手当(円)']];
+  target.forEach(e => {
+    const cat = catOf(e);
+    rows.push([e.date, e.name, e.empNo || '', e.workType === 'onsite' ? '現場作業' : '社内作業',
+      CAT_LABELS[cat] || cat, e.order || '', e.subject || '', e.start, e.end,
+      e.mainRegular, e.mainLateNight, e.lateNightAllowance || 0]);
+    if (e.hasReturnWork) rows.push([e.date, e.name, e.empNo || '', '帰社後作業', CAT_LABELS[cat] || cat,
+      e.returnOrder || '', e.returnSubject || '', e.returnStart, e.returnEnd,
+      e.returnRegular, e.returnLateNight, 0]);
   });
-  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
   const a = document.createElement('a');
-  const today = new Date();
-  a.href = url;
-  a.download = `残業報告書_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = `残業報告書_${periodSuffix(p.y, p.m, p.jun)}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// ===== 旬報 Excel =====
-function exportExpenseExcel() {
-  const month = document.getElementById('junMonth').value;
-  const jun = document.getElementById('junSelect').value;
-  if (!month) { alert('対象年月を選択してください'); return; }
+// ===== 旬報（旅費交通費等精算書）Excel =====
+const JUNPO_COST_DIV = 7;            // 部（原本の全21面で固定）
+const JUNPO_ITEM = '旅費交通費';      // 品名（同上）
+const JUNPO_DEBIT = 540525;          // 借方（同上）
+// 工事名(C)を広く取り、他列を詰める。実台帳2,971件の工事名の幅分布から、
+// C=48 で折返しの発生を 24.5% → 6.4% に下げつつ、表幅を印刷可能幅に収める
+const JUNPO_COLW = [10, 12, 48, 5, 5, 5, 5, 8, 8, 8, 10, 10];
+const CAT_COL = { regular: 3, holiday_work: 4, paid_leave: 5, comp_leave: 6 };
+// オーダ別集計ブロックの列割当て（原本の並び順のまま、列幅に合う位置へ結合して配置）
+const OB = { label: [0, 1], order: [2, 2], days: [3, 3], div: [4, 4], item: [5, 6],
+  debit: [7, 8], credit: [9, 9], amount: [10, 10], cost: [11, 11] };
 
-  const [y, m] = month.split('-').map(Number);
-  const filtered = entries.filter(e => {
-    if (!e.date.startsWith(month)) return false;
-    if (jun !== 'all' && getJun(e.date) !== jun) return false;
-    return true;
-  }).sort((a,b) => a.date.localeCompare(b.date));
+/** 行1〜5: 表題・所属・社員NO.・氏名・期間 */
+function junpoHead(ws, y, m, jun, name, empNo) {
+  const pink = xS({ fill: FILL_PINK, border: B_GRID, alignment: AL_C });
+  const val = xS({ border: B_GRID, alignment: AL_C });
+  const d = junDays(y, m, jun);
+  const label = (r, text, v) => {
+    xPut(ws, r, 8, text, pink); xPut(ws, r, 9, v, val); xFill(ws, r, 10, 11, val); xMerge(ws, r, 9, r, 11);
+  };
+  xPut(ws, 0, 1, '旅費交通費等精算書', xS({ font: { sz: 14, bold: true }, alignment: AL_L }));
+  xPut(ws, 1, 0, m, xS({ alignment: AL_R }));
+  xPut(ws, 1, 1, '月度分', xS({ alignment: AL_L }));
+  label(1, '所属', settings.dept || '');
+  label(2, '社員NO.', empNo);
+  label(3, '氏名', name);
+  xPut(ws, 3, 1, '期間', pink);
+  xPut(ws, 3, 2, ymdText(y, m, d[0]), val); xPut(ws, 3, 3, '', val); xMerge(ws, 3, 2, 3, 3);
+  xPut(ws, 3, 4, 'から', pink);
+  xPut(ws, 4, 2, ymdText(y, m, d[1]), val); xPut(ws, 4, 3, '', val); xMerge(ws, 4, 2, 4, 3);
+  xPut(ws, 4, 4, 'まで', pink);
+}
 
-  if (filtered.length === 0) { alert('該当データがありません'); return; }
+/** 行7〜8: 明細見出し（2段） */
+function junpoTableHead(ws) {
+  const h = c => xS({ fill: FILL_PINK, font: { bold: true }, border: xB(xEdge(c, 11, true, false)),
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true } });
+  ['日付', 'オーダ番号', '工事名', '常用', '休出', '有給', '代休', null, null, '日当', '交通費', '小計']
+    .forEach((t, c) => {
+      if (t === null) return;
+      xPut(ws, 6, c, t, h(c)); xPut(ws, 7, c, '', h(c)); xMerge(ws, 6, c, 7, c);
+    });
+  xPut(ws, 6, 7, '勤務時間', h(7)); xPut(ws, 6, 8, '', h(8)); xMerge(ws, 6, 7, 6, 8);
+  xPut(ws, 7, 7, '自', h(7)); xPut(ws, 7, 8, '至', h(8));
+}
 
-  const reiwa = y - 2018;
-  const junLabel = JUN_LABELS[jun];
-  const wb = XLSX.utils.book_new();
-  const wsData = [];
-  wsData.push([`旅費交通費等精算書`]);
-  wsData.push([`令和${reiwa}年${m}月${junLabel}`]);
-  wsData.push(['氏名', settings.name || filtered[0].name, '', '社員番号', settings.empNo || filtered[0].empNo || '', '', '所属', settings.dept || '']);
-  wsData.push(['']);
-  wsData.push(['日付','オーダー №','件名','勤務区分','開始','終了','日当(円)','交通機関','区間','交通費(円)','宿泊費(円)','小計(円)','備考']);
+/** 行9〜: 明細（最低15行）＋ 合計行。合計行の次の行番号を返す */
+function junpoBody(ws, rows) {
+  const cellS = (c, num) => xS({ border: xB(xEdge(c, 11, false, false)), numFmt: num ? NF_YEN : undefined,
+    fill: c === 4 ? FILL_GRAY : undefined, alignment: c === 2 ? AL_LW : num ? AL_R : AL_C });   // c=2: 工事名
+  const n = Math.max(15, rows.length);
+  for (let i = 0; i < n; i++) {
+    const r = 8 + i, e = rows[i];
+    for (let c = 0; c < 12; c++) xPut(ws, r, c, '', cellS(c, c >= 9));
+    if (!e) continue;
+    xPut(ws, r, 0, mdText(e.date), cellS(0));
+    xPut(ws, r, 1, e.order || '', cellS(1));
+    xPut(ws, r, 2, e.subject || '', cellS(2));
+    const cc = CAT_COL[catOf(e)];
+    if (cc !== undefined) xPut(ws, r, cc, 1, cellS(cc));
+    // 残業対象外（有給・代休）は既定の勤務時間を印字しない
+    if (hasOvertimeCategory(catOf(e))) {
+      xPut(ws, r, 7, e.start || '', cellS(7)); xPut(ws, r, 8, e.end || '', cellS(8));
+    }
+    xPut(ws, r, 9, e.dailyAllowance || 0, cellS(9, true));
+    xPut(ws, r, 10, e.transportAmount || 0, cellS(10, true));
+    xPut(ws, r, 11, junpoSubtotal(e), cellS(11, true));
+  }
+  const tr = 8 + n;
+  const totS = (c, num) => xS({ fill: FILL_PINK, font: { bold: true }, numFmt: num ? NF_YEN : undefined,
+    border: xB(xEdge(c, 11, true, true)), alignment: num ? AL_R : AL_C });
+  for (let c = 0; c < 12; c++) xPut(ws, tr, c, '', totS(c, c >= 9));
+  xPut(ws, tr, 0, '合        計', totS(0)); xMerge(ws, tr, 0, tr, 2);
+  Object.keys(CAT_COL).forEach(k => xPut(ws, tr, CAT_COL[k],
+    rows.filter(e => catOf(e) === k).length, totS(CAT_COL[k], true)));
+  xPut(ws, tr, 9, rows.reduce((s, e) => s + (e.dailyAllowance || 0), 0), totS(9, true));
+  xPut(ws, tr, 10, rows.reduce((s, e) => s + (e.transportAmount || 0), 0), totS(10, true));
+  xPut(ws, tr, 11, rows.reduce((s, e) => s + junpoSubtotal(e), 0), totS(11, true));
+  return tr + 1;
+}
 
-  const costRate = settings.costRate || 0;
-  filtered.forEach(e => {
-    const cat = e.workCategory || (e.dayType === 'holiday' ? 'holiday_work' : 'regular');
-    const subtotal = (e.dailyAllowance || 0) + (e.transportAmount || 0) + (e.accommodation || 0);
-    wsData.push([
-      e.date, e.order || '', e.subject || '', CAT_LABELS[cat] || cat,
-      e.start || '', e.end || '',
-      e.dailyAllowance || 0,
-      e.transportType || '', e.transportRoute || '',
-      e.transportAmount || 0, e.accommodation || 0,
-      subtotal, e.remarks || ''
-    ]);
-  });
-
-  wsData.push(['']);
-  const totalDaily = filtered.reduce((s,e) => s + (e.dailyAllowance || 0), 0);
-  const totalTransport = filtered.reduce((s,e) => s + (e.transportAmount || 0), 0);
-  const totalAccom = filtered.reduce((s,e) => s + (e.accommodation || 0), 0);
-  wsData.push(['','','','','','合計', totalDaily, '', '', totalTransport, totalAccom, totalDaily + totalTransport + totalAccom, '']);
-
-  // オーダー別集計
-  wsData.push(['']);
-  wsData.push(['【オーダー別集計】']);
-  wsData.push(['オーダー番号', '件名', '日数', '交通費(円)', '日当(円)', '勤務原価(円)', '合計(円)']);
+/**
+ * オーダ別集計。日数は常用・休出の日付ユニーク数（同日複数エントリーでも1日）。
+ * 除外するのは「日数0 かつ 金額0」の行だけ。オーダー番号が空でも金額があれば必ず計上する
+ * （除外すると明細の合計とオーダ別の金額計がズレて経理の突合が合わなくなる）。
+ */
+function junpoOrderAgg(rows) {
   const byOrder = {};
-  filtered.forEach(e => {
-    const key = e.order || '（なし）';
-    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', days: 0, transport: 0, allowance: 0 };
-    byOrder[key].days++;
-    byOrder[key].transport += e.transportAmount || 0;
-    byOrder[key].allowance += e.dailyAllowance || 0;
+  rows.forEach(e => {
+    const k = String(e.order || '').trim() || NO_ORDER_LABEL;
+    if (!byOrder[k]) byOrder[k] = { dates: {}, amount: 0 };
+    if (hasOvertimeCategory(catOf(e))) byOrder[k].dates[e.date] = 1;
+    byOrder[k].amount += junpoSubtotal(e);
   });
-  Object.entries(byOrder).forEach(([order, d]) => {
-    const cost = d.days * costRate;
-    wsData.push([order, d.subject, d.days, d.transport, d.allowance, cost, d.transport + d.allowance + cost]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{wch:14},{wch:14},{wch:20},{wch:8},{wch:8},{wch:8},{wch:10},{wch:12},{wch:16},{wch:12},{wch:12},{wch:12},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, ws, '旬報');
-  XLSX.writeFile(wb, `旬報_${y}年${m}月${junLabel}_${settings.name || ''}.xlsx`);
+  const rate = settings.costRate || 0;
+  return Object.keys(byOrder).map(k => {
+    const days = Object.keys(byOrder[k].dates).length;
+    return { order: k, days: days, amount: byOrder[k].amount, cost: rate ? days * rate : '' };
+  }).filter(d => d.days > 0 || d.amount !== 0);   // 意味のない行（日数0かつ金額0）だけ落とす
 }
+
+const OB_KEYS = ['label', 'order', 'days', 'div', 'item', 'debit', 'credit', 'amount', 'cost'];
+const OB_HEADS = ['（オーダ別）', 'ｵｰﾀﾞ番号', '日数', '部', '品名', '借方', '貸方', '金額', '労務原価'];
+const OB_NUM = { days: 1, amount: 1, cost: 1 };
+
+/** オーダ別集計ブロック。次の行番号を返す */
+function junpoOrderBlock(ws, rows, r0) {
+  const st = (c, o) => xS(Object.assign({ border: xB(xEdge(c, 11, o.t, o.b)),
+    alignment: o.num ? AL_R : AL_C, numFmt: o.num ? NF_YEN : undefined }, o.s || {}));
+  const bold = { font: { bold: true } }, pink = { font: { bold: true }, fill: FILL_PINK };
+  // セル配置（結合は行ごとに1回だけ登録する）
+  const cell = (r, key, v, o) => {
+    const g = OB[key];
+    for (let c = g[0]; c <= g[1]; c++) xPut(ws, r, c, c === g[0] ? v : '', st(c, o));
+  };
+  const mergeRow = r => OB_KEYS.forEach(k => { if (OB[k][1] > OB[k][0]) xMerge(ws, r, OB[k][0], r, OB[k][1]); });
+  const fillRow = (r, o) => OB_KEYS.forEach(k => cell(r, k, '', Object.assign({ num: !!OB_NUM[k] }, o)));
+
+  OB_KEYS.forEach((k, i) => cell(r0, k, OB_HEADS[i], { s: pink, t: true }));
+  mergeRow(r0);
+  const list = junpoOrderAgg(rows);
+  const n = Math.max(9, list.length);
+  for (let i = 0; i < n; i++) {
+    const r = r0 + 1 + i, d = list[i];
+    fillRow(r, {}); mergeRow(r);
+    if (!d) continue;
+    cell(r, 'order', d.order, {}); cell(r, 'days', d.days, { num: true });
+    cell(r, 'div', JUNPO_COST_DIV, {}); cell(r, 'item', JUNPO_ITEM, {}); cell(r, 'debit', JUNPO_DEBIT, {});
+    cell(r, 'amount', d.amount, { num: true }); cell(r, 'cost', d.cost, { num: true });
+  }
+  const tr = r0 + 1 + n, e = { s: bold, t: true, b: true }, tot = f => list.reduce((s, d) => s + (+f(d) || 0), 0);
+  fillRow(tr, e); mergeRow(tr);
+  cell(tr, 'label', '合　計', e);
+  cell(tr, 'days', tot(d => d.days), Object.assign({ num: true }, e));
+  cell(tr, 'amount', tot(d => d.amount), Object.assign({ num: true }, e));
+  cell(tr, 'cost', settings.costRate ? tot(d => d.cost) : '', Object.assign({ num: true }, e));
+  return tr + 1;
+}
+
+/** 注記（原本の文言そのまま） */
+const JUNPO_NOTES = [
+  '注）①当月1日～10日、11日～20日、21日～末日までの３旬毎で清算する。',
+  '    ②1日2件以上の交通機関を利用した場合は、行をかえて詳細に記載する。',
+  '    ③各旬締め日より３日以内かつ月末は締め日翌日（１３日、２３日、翌月１日）に提出すること。'
+];
+
+function buildJunpoSheet(rows, y, m, jun, name) {
+  const ws = {};
+  junpoHead(ws, y, m, jun, name, (rows[0] && rows[0].empNo) || settings.empNo || '');
+  junpoTableHead(ws);
+  const r2 = junpoOrderBlock(ws, rows, junpoBody(ws, rows) + 1);
+  const note = xS({ font: { sz: 10 }, alignment: AL_L });
+  JUNPO_NOTES.forEach((t, i) => xPut(ws, r2 + 1 + i, 0, t, note));
+  const last = r2 + 1 + JUNPO_NOTES.length + 1;
+  xPut(ws, last, 8, '  株式会社 神戸エーアイテレコム', note);
+  return xFinish(ws, last, 11, JUNPO_COLW);
+}
+
+/** 旬報Excelの出力対象外の項目（宿泊費・交通機関・区間・備考）が入っていれば明示的に確認する */
+function junpoDropWarning(list) {
+  const n = list.filter(e => (e.accommodation || 0) > 0 || e.transportType || e.transportRoute || e.remarks).length;
+  if (n === 0) return true;
+  return confirm(`宿泊費・交通機関・区間・備考は旬報Excelの出力対象外です（対象: ${n}件）。`
+    + '\nこのまま出力しますか？');
+}
+
+function exportExpenseExcel() {
+  const p = readExportPeriod('junMonth', 'junSelect');
+  if (!p) return;
+  const all = filterByPeriod(entries, p.month, p.jun);
+  if (all.length === 0) { alert('該当データがありません'); return; }
+  if (!junpoDropWarning(all)) return;
+  const wb = XLSX.utils.book_new();
+  const used = {};
+  (p.jun === 'all' ? JUN_ORDER : [p.jun]).forEach(j => {
+    const inJun = all.filter(e => getJun(e.date) === j);
+    uniqueNames(inJun).forEach(nm => {
+      XLSX.utils.book_append_sheet(wb, buildJunpoSheet(inJun.filter(e => e.name === nm), p.y, p.m, j, nm),
+        otSheetName(nm, JUN_LABELS[j], used));
+    });
+  });
+  const nm = uniqueNames(all).length === 1 ? uniqueNames(all)[0] : (settings.name || '');
+  downloadBook(wb, `旬報_${periodSuffix(p.y, p.m, p.jun)}_${nm}.xlsx`);
+}
+
+initApp();
 </script>
 
 </body>

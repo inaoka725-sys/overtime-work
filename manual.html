@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>時間外・旅費精算書アプリ｜使い方マニュアル</title>
+  <title>旬報｜使い方マニュアル</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic Pro', sans-serif; background: #f5f7fa; color: #333; line-height: 1.7; }
@@ -141,8 +141,8 @@
 
 <div class="top-header">
   <div class="tag">使い方マニュアル</div>
-  <h1>時間外・旅費精算書アプリ</h1>
-  <p>残業時間の自動計算 + 旬報（旅費精算）まで、かんたん操作ガイド</p>
+  <h1>旬報</h1>
+  <p>残業時間の自動計算から、残業報告書・旬報の出力まで。かんたん操作ガイド</p>
 </div>
 
 <div class="app-link" style="margin-top:24px;">
@@ -156,10 +156,13 @@
     <a class="toc-item" href="#sec2"><div class="toc-num">2</div>作業内容を入力する</a>
     <a class="toc-item" href="#sec3"><div class="toc-num">3</div>旅費・日当を入力する</a>
     <a class="toc-item" href="#sec4"><div class="toc-num">4</div>残業時間の計算ルール</a>
-    <a class="toc-item" href="#sec5"><div class="toc-num">5</div>旬報を確認・ダウンロードする</a>
-    <a class="toc-item" href="#sec6"><div class="toc-num">6</div>設定を登録する</a>
-    <a class="toc-item" href="#sec7"><div class="toc-num">7</div>Excelファイルの内容</a>
-    <a class="toc-item" href="#sec8"><div class="toc-num">8</div>よくある質問</a>
+    <a class="toc-item" href="#sec5"><div class="toc-num">5</div>登録した内容を直す・消す</a>
+    <a class="toc-item" href="#sec6"><div class="toc-num">6</div>残業報告書を出力する</a>
+    <a class="toc-item" href="#sec7"><div class="toc-num">7</div>旬報を確認・ダウンロードする</a>
+    <a class="toc-item" href="#sec8"><div class="toc-num">8</div>設定とオーダー台帳</a>
+    <a class="toc-item" href="#sec9"><div class="toc-num">9</div>データの取り扱いとバックアップ</a>
+    <a class="toc-item" href="#sec10"><div class="toc-num">10</div>Excelファイルの内容</a>
+    <a class="toc-item" href="#sec11"><div class="toc-num">11</div>よくある質問</a>
   </div>
 </div>
 
@@ -190,7 +193,7 @@
           ② 旅費・日当を入力（旬報用）<br>
           ③ 残業時間が自動計算される<br>
           ④「この内容を追加」で一覧に登録<br>
-          ⑤「残業報告書 Excel ダウンロード」
+          ⑤「出力対象」の年月と旬を選んで Excel／CSV を出力
         </div>
       </div>
     </div>
@@ -198,21 +201,31 @@
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px;">
       <div style="border:1px solid #e0e4ea;border-radius:10px;padding:14px;">
         <div style="font-weight:bold;color:#1a3a5c;margin-bottom:6px;">📋 残業報告書タブ</div>
-        <div style="font-size:13px;color:#555;">作業の入力・残業時間の確認・Excel出力を行うメインタブ</div>
+        <div style="font-size:13px;color:#555;">作業の入力・残業時間の確認・登録内容の修正・残業報告書の出力を行うメインタブ</div>
       </div>
       <div style="border:1px solid #e0e4ea;border-radius:10px;padding:14px;">
         <div style="font-weight:bold;color:#2980b9;margin-bottom:6px;">📑 旬報タブ</div>
-        <div style="font-size:13px;color:#555;">年月・旬（上旬/中旬/下旬）を選んで旅費明細・オーダー別集計を確認。旬報Excelをダウンロード</div>
+        <div style="font-size:13px;color:#555;">年月と旬（一旬／二旬／三旬）を選んで、旅費の明細とオーダー別の集計を確認。旬報のExcelをダウンロード</div>
       </div>
       <div style="border:1px solid #e0e4ea;border-radius:10px;padding:14px;">
         <div style="font-weight:bold;color:#27ae60;margin-bottom:6px;">⚙️ 設定タブ</div>
-        <div style="font-size:13px;color:#555;">氏名・社員番号・所属・勤務原価単価を登録（入力フォームへの自動反映）</div>
+        <div style="font-size:13px;color:#555;">氏名・社員番号・所属の登録／オーダー台帳の取り込み／データのバックアップと復元</div>
       </div>
     </div>
 
-    <div class="point-box ok" style="margin-top:16px;">
+    <div class="point-box" style="margin-top:16px;">
+      <strong>「旬」の呼び方</strong>
+      1か月を3つに分けて提出します。<b>一旬＝1〜10日</b>／<b>二旬＝11〜20日</b>／<b>三旬＝21日〜末日</b>。アプリの中もこの呼び方で統一されています。
+    </div>
+
+    <div class="point-box warn">
+      <strong>提出の流れ</strong>
+      各旬の締め日から3営業日以内に、<b>直近上司 → 所属部長 → 事務</b>の順で提出してください。
+    </div>
+
+    <div class="point-box ok">
       <strong>旧Excelとの違い</strong>
-      残業報告書と旬報（旅費精算）の<strong>二重入力が不要</strong>になります。1回の入力で両方の書類を出力できます。
+      残業報告書と旬報（旅費精算）の<b>二重入力が不要</b>になります。1回の入力で両方の書類を出力できます。
     </div>
   </div>
 </div>
@@ -237,7 +250,7 @@
             <div class="mock-grid">
               <div>
                 <div class="mock-label">日付</div>
-                <div class="mock-input highlight">2026/05/04</div>
+                <div class="mock-input highlight">2026/07/02</div>
               </div>
               <div>
                 <div class="mock-label">報告者氏名</div>
@@ -245,16 +258,17 @@
               </div>
               <div>
                 <div class="mock-label">オーダー №</div>
-                <div class="mock-input">A-2026-001</div>
+                <div class="mock-input">310101</div>
               </div>
               <div>
                 <div class="mock-label">件名（工事名）</div>
-                <div class="mock-input">設備点検作業</div>
+                <div class="mock-input">○○新築工事</div>
               </div>
             </div>
           </div>
           <div class="point-box" style="margin-top:10px;">
-            <strong>ポイント</strong>設定タブで氏名・社員番号を登録しておくと、次回から自動で入力されます。
+            <strong>入力の手間を減らすしくみ</strong>
+            設定タブで氏名・社員番号を登録しておくと、次回から自動で入ります。オーダー番号を入れて次の欄に移ると、<b>件名と日当が台帳から自動で入ります</b>（設定タブでオーダー台帳を取り込んでいる場合）。
           </div>
         </div>
       </div>
@@ -299,7 +313,11 @@
           </div>
           <div class="point-box ok" style="margin-top:10px;">
             <strong>現場作業を選ぶと「帰社後にも作業あり」が表示されます</strong>
-            現場→帰社後の社内継続作業がある場合はチェックしてください。帰社後の全時間が残業対象になります。
+            現場から戻ったあと社内で続けて作業した場合はチェックし、帰社後のオーダー番号・件名・時間を入力してください。帰社後の分は別の行として記録されます。
+          </div>
+          <div class="point-box warn" style="margin-top:10px;">
+            <strong>帰社後の開始時間に注意</strong>
+            帰社後の開始時間は、現場作業の終了時間より前にはできません。前の時間を選んで登録すると「帰社後の開始時間は作業終了時間以降に設定してください」と表示されます。
           </div>
         </div>
       </div>
@@ -331,7 +349,7 @@
         <div class="step-num">5</div>
         <div class="step-body">
           <h3>計算結果を確認する</h3>
-          <p>時間を選ぶと自動で残業時間が表示されます。有給・代休の場合は計算なしと表示されます。</p>
+          <p>時間を選ぶと自動で残業時間が表示されます。有給・代休の場合は「残業計算の対象外です」と表示されます。</p>
           <div class="result-mock" style="margin-top:12px;">
             <div class="result-row">
               <div class="result-label">普通残業</div>
@@ -343,6 +361,15 @@
             </div>
             <div style="font-size:12px;color:#888;margin-top:8px;">残業開始時間: 18:30（勤務開始から9時間30分後）</div>
           </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h3>「この内容を追加」を押す</h3>
+          <p>下の「登録済み作業一覧」に追加されます。続けて次の日の分を入力できます。</p>
+          <div class="btn-mock btn-primary" style="font-size:14px;">この内容を追加</div>
         </div>
       </div>
 
@@ -368,13 +395,13 @@
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-body">
-          <h3>日当を選ぶ</h3>
-          <p>その日の日当金額を選択します。</p>
+          <h3>日当を入力する</h3>
+          <p>その日の日当を円で入力します。オーダー番号を入力していれば、台帳に登録された日当が自動で入ります。金額が違う場合は上書きしてください。</p>
           <div style="margin-top:12px;">
-            <div class="mock-label">日当</div>
-            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:14px;width:200px;">150円</div>
+            <div class="mock-label">日当（円）</div>
+            <div class="mock-input highlight" style="width:200px;">150</div>
           </div>
-          <div style="font-size:12px;color:#888;margin-top:6px;">選択肢: 0円（なし）/ 150円 / 300円</div>
+          <div style="font-size:12px;color:#888;margin-top:6px;">日当がない日は「0」のままにしてください。</div>
         </div>
       </div>
 
@@ -387,7 +414,7 @@
             <div class="mock-grid">
               <div>
                 <div class="mock-label">交通機関</div>
-                <div class="mock-input">JR東日本</div>
+                <div class="mock-input">JR</div>
               </div>
               <div>
                 <div class="mock-label">区間</div>
@@ -428,6 +455,10 @@
                 <div class="mock-input">〇〇ホテル泊</div>
               </div>
             </div>
+          </div>
+          <div class="point-box warn" style="margin-top:10px;">
+            <strong>宿泊費・交通機関・区間・備考は旬報のExcelには出ません</strong>
+            会社の旬報の書式が決まっているためです。入力した内容は<b>旬報タブの画面には表示される</b>ので、そこで確認できます。これらを入力したまま旬報のExcelを出そうとすると、出力前に「出力対象外です。このまま出力しますか？」という確認メッセージが出ます。宿泊費などの精算は事務にご確認ください。
           </div>
         </div>
       </div>
@@ -525,13 +556,13 @@
     <table class="break-table">
       <thead><tr><th>休憩時間</th><th>時間</th><th>備考</th></tr></thead>
       <tbody>
+        <tr><td>08:30 〜 09:00</td><td>0.5h</td><td>朝休憩</td></tr>
         <tr><td>12:00 〜 13:00</td><td>1.0h</td><td>昼休憩</td></tr>
         <tr><td>15:00 〜 15:30</td><td>0.5h</td><td>午後休憩</td></tr>
         <tr><td>18:00 〜 18:30</td><td>0.5h</td><td>夕方休憩</td></tr>
         <tr><td>22:00 〜 22:30</td><td>0.5h</td><td>深夜突入前休憩</td></tr>
         <tr><td>翌 2:00 〜 3:00</td><td>1.0h</td><td>夜間休憩</td></tr>
         <tr><td>翌 6:00 〜 6:30</td><td>0.5h</td><td>早朝休憩</td></tr>
-        <tr><td>翌 8:30 〜 9:00</td><td>0.5h</td><td>朝休憩</td></tr>
       </tbody>
     </table>
   </div>
@@ -571,12 +602,135 @@
 <div class="section" id="sec5">
   <div class="section-header">
     <div class="section-num">5</div>
+    <div class="section-title">登録した内容を直す・消す</div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;color:#555;margin-bottom:16px;">
+      「登録済み作業一覧」の各行に「編集」「削除」のボタンがあります。入力を間違えても、消して入れ直す必要はありません。
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>「編集」を押す</h3>
+          <p>直したい行の「編集」を押すと、その内容が上の入力フォームに戻り、画面が自動で上へ移動します。</p>
+          <div style="margin-top:12px;display:flex;gap:8px;">
+            <div class="btn-mock" style="background:#e67e22;color:white;font-size:13px;padding:6px 14px;border-radius:6px;margin-top:0;">編集</div>
+            <div class="btn-mock btn-danger" style="margin-top:0;">削除</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>内容を直して「更新する」を押す</h3>
+          <p>編集中は黄色い帯が出て、ボタンの文字が「更新する」に変わります。押すと元の行が書き換わります（新しい行は増えません）。</p>
+          <div style="background:#fef9e7;border:1px solid #f39c12;border-radius:8px;padding:10px 14px;font-size:13px;color:#7a5c00;margin-top:12px;">
+            編集モード：内容を変更して「更新する」を押してください
+          </div>
+          <div class="btn-mock btn-primary" style="font-size:14px;">更新する</div>
+          <div class="point-box" style="margin-top:10px;">
+            <strong>やめたいとき</strong>黄色い帯の中の「キャンセル」を押すと、編集をやめて元に戻せます。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>いらない行は「削除」で消す</h3>
+          <p>その行だけがすぐに消えます。元には戻せないのでご注意ください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="point-box warn" style="margin-top:4px;">
+      <strong>同じ内容の二重登録は防止されます</strong>
+      <b>氏名・日付・作業開始時間</b>がすべて同じ登録があると、「同じ氏名・日付・開始時刻の登録が既に存在します」と表示され、登録できません。1日に別のオーダーで2件登録したいときは、開始時間を実際の時間に分けて入力するか、「帰社後にも作業あり」をご利用ください。
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション6 ===== -->
+<div class="section" id="sec6">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <div class="section-title">残業報告書を出力する</div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;color:#555;margin-bottom:16px;">
+      残業報告書タブの「合計」欄で、<strong>出力する年月と旬を選んでから</strong>ダウンロードします。
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>「出力対象」で年月と旬を選ぶ</h3>
+          <p>アプリを開いた時点で、今日の日付の年月と旬が最初から選ばれています。別の旬を出したいときだけ変更してください。</p>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;background:#f8f9fb;border:1px solid #e0e4ea;border-radius:10px;padding:12px;">
+            <div style="font-size:13px;color:#555;font-weight:bold;">出力対象:</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">2026-07</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">一旬（1〜10日）</div>
+          </div>
+          <div style="font-size:12px;color:#888;margin-top:6px;">選べるのは 一旬（1〜10日）／二旬（11〜20日）／三旬（21〜末日）／全期間（3旬まとめて）です。</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>すぐ下の表示で件数と合計を確かめる</h3>
+          <p>選んだ旬に何件入っているか、残業の合計が何時間かがその場で表示されます。件数が「0件」のときは、年月や旬の選び間違いがないか確認してください。</p>
+          <div style="font-size:12px;color:#1a3a5c;background:#eef3f8;border:1px solid #d3e0ec;border-radius:6px;padding:6px 10px;margin-top:12px;">
+            出力対象（一旬）: 3件 / 普通残業 8.5H / 深夜残業 1.0H / 深夜作業手当 3,000円
+          </div>
+          <div class="point-box" style="margin-top:10px;">
+            <strong>上の「合計」の数字との違い</strong>
+            上段の大きい数字は<b>今まで登録した全部</b>の合計、こちらの1行は<b>選んだ旬だけ</b>の合計です。提出前はこちらの1行を確認してください。
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>「残業報告書 Excel」を押す</h3>
+          <p>選んだ旬の残業報告書がダウンロードされます。氏名ごと・旬ごとにシートが分かれ、1枚がA4横1ページに収まります。</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+            <div class="btn-mock btn-success" style="font-size:14px;margin-top:0;">残業報告書 Excel</div>
+            <div class="btn-mock btn-info" style="font-size:14px;margin-top:0;">残業報告書 CSV</div>
+          </div>
+          <div style="background:#f8f9fb;border:1px solid #e0e4ea;border-radius:8px;padding:12px;margin-top:12px;font-family:monospace;font-size:13px;color:#555;">
+            時間外作業報告書_令和8年7月一旬.xlsx
+          </div>
+          <div class="point-box" style="margin-top:10px;">
+            <strong>CSVボタンについて</strong>
+            同じ内容を、表計算ソフトや他システムに取り込みやすい形式（CSV）で保存します。通常の提出には「Excel」をお使いください。<br>
+            ファイル名の例：残業報告書_令和8年7月一旬.csv
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション7 ===== -->
+<div class="section" id="sec7">
+  <div class="section-header">
+    <div class="section-num">7</div>
     <div class="section-title">旬報を確認・ダウンロードする</div>
   </div>
 
   <div class="card">
     <p style="font-size:13px;color:#555;margin-bottom:16px;">
-      <strong>旬報とは</strong>：1ヶ月を「上旬（1〜10日）」「中旬（11〜20日）」「下旬（21〜末日）」に分けて提出する旅費交通費等精算書です。
+      <strong>旬報とは</strong>：1か月を「一旬（1〜10日）」「二旬（11〜20日）」「三旬（21日〜末日）」に分けて提出する旅費交通費等精算書です。
     </p>
 
     <div class="steps">
@@ -584,7 +738,7 @@
         <div class="step-num">1</div>
         <div class="step-body">
           <h3>「旬報」タブを開く</h3>
-          <p>画面上部の「旬報」タブをタップします。</p>
+          <p>画面上部の「旬報」タブを押します。</p>
           <div class="tab-fig" style="max-width:300px;margin-top:12px;">
             <div class="tab-fig-nav">
               <div class="tab-fig-btn">残業報告書</div>
@@ -600,10 +754,10 @@
         <div class="step-num">2</div>
         <div class="step-body">
           <h3>対象年月と旬を選んで「表示」を押す</h3>
-          <p>対象の年月と旬（上旬/中旬/下旬/全期間）を選択して「表示」ボタンを押します。</p>
+          <p>対象の年月と旬（一旬／二旬／三旬／全期間）を選択して「表示」ボタンを押します。</p>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;background:#f8f9fb;border:1px solid #e0e4ea;border-radius:10px;padding:12px;">
-            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">2026-05</div>
-            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">上旬（1〜10日）</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">2026-07</div>
+            <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">一旬（1〜10日）</div>
             <div style="background:#2980b9;color:white;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:bold;">表示</div>
           </div>
         </div>
@@ -611,29 +765,29 @@
 
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-body">
+        <div class="step-body" style="min-width:0;">
           <h3>旅費明細・オーダー別集計を確認する</h3>
-          <p>選択した旬の全作業が一覧表示されます。下部にはオーダー別の集計も表示されます。</p>
+          <p>選択した旬の全作業が一覧表示されます。宿泊費や備考もここで確認できます。下部にはオーダー別の集計も表示されます。</p>
           <div style="overflow-x:auto;margin-top:12px;">
-            <table class="expense-table">
+            <table class="expense-table" style="min-width:640px;">
               <thead>
                 <tr>
-                  <th>日付</th><th>オーダー</th><th>件名</th><th>区分</th>
-                  <th>日当</th><th>交通機関</th><th>区間</th><th>交通費</th><th>小計</th>
+                  <th>日付</th><th>オーダー</th><th>件名</th><th>区分</th><th>勤務時間</th>
+                  <th>日当</th><th>交通機関</th><th>区間</th><th>交通費</th><th>宿泊費</th><th>小計</th><th>備考</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>5/2（金）</td><td>A-001</td><td>設備点検</td><td>常用</td>
-                  <td>150</td><td>JR</td><td>新宿→渋谷</td><td>420</td><td>570</td>
+                  <td>7/2（木）</td><td>310101</td><td>○○新築工事</td><td>常用</td><td>09:00〜21:00</td>
+                  <td>150</td><td>JR</td><td>新宿→渋谷</td><td>420</td><td>—</td><td>570</td><td></td>
                 </tr>
                 <tr>
-                  <td>5/4（日）</td><td>A-001</td><td>設備点検</td><td>休出</td>
-                  <td>300</td><td>—</td><td>—</td><td>—</td><td>300</td>
+                  <td>7/5（日）</td><td>310101</td><td>○○新築工事</td><td>休出</td><td>09:00〜17:00</td>
+                  <td>300</td><td>—</td><td>—</td><td>—</td><td>—</td><td>300</td><td></td>
                 </tr>
                 <tr style="font-weight:bold;background:#f0f4f8;">
-                  <td colspan="4">合計</td>
-                  <td>450</td><td></td><td></td><td>420</td><td>870円</td>
+                  <td colspan="5">合計</td>
+                  <td>450</td><td></td><td></td><td>420</td><td>0</td><td>870円</td><td></td>
                 </tr>
               </tbody>
             </table>
@@ -645,143 +799,18 @@
         <div class="step-num">4</div>
         <div class="step-body">
           <h3>「旬報 Excel ダウンロード」を押す</h3>
-          <p>旅費交通費等精算書フォーマットのExcelが保存されます。</p>
+          <p>会社の旅費交通費等精算書の書式でExcelが保存されます。氏名ごと・旬ごとにシートが分かれます。</p>
           <div style="margin-top:12px;">
             <div class="btn-mock btn-success" style="display:inline-block;font-size:14px;">旬報 Excel ダウンロード</div>
           </div>
           <div style="background:#f8f9fb;border:1px solid #e0e4ea;border-radius:8px;padding:12px;margin-top:8px;font-family:monospace;font-size:13px;color:#555;">
-            旬報_2026年5月上旬_山田太郎.xlsx
+            旬報_令和8年7月一旬_山田太郎.xlsx
+          </div>
+          <div class="point-box warn" style="margin-top:10px;">
+            <strong>確認メッセージが出たら</strong>
+            宿泊費・交通機関・区間・備考が入力されていると、「これらは旬報Excelの出力対象外です。このまま出力しますか？」と聞かれます。内容を承知のうえで出す場合は「OK」を押してください。
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ===== セクション6 ===== -->
-<div class="section" id="sec6">
-  <div class="section-header">
-    <div class="section-num">6</div>
-    <div class="section-title">設定を登録する</div>
-  </div>
-
-  <div class="card">
-    <p style="font-size:13px;color:#555;margin-bottom:16px;">
-      設定タブで氏名・社員番号などを登録しておくと、入力の手間が省けます。<br>
-      設定内容はブラウザに保存され、次回以降も引き継がれます。
-    </p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-body">
-          <h3>「設定」タブを開く</h3>
-          <p>画面上部の「設定」タブをタップします。</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-body">
-          <h3>各項目を入力する</h3>
-          <div class="form-mock" style="margin-top:12px;">
-            <div class="mock-label">氏名（デフォルト）</div>
-            <div class="mock-input">山田 太郎</div>
-            <div class="mock-label">社員番号</div>
-            <div class="mock-input">1234</div>
-            <div class="mock-label">所属（部署）</div>
-            <div class="mock-input">工事部</div>
-            <div class="mock-label">勤務原価単価（円/日）</div>
-            <div class="mock-input">15000</div>
-          </div>
-          <div class="point-box" style="margin-top:10px;">
-            <strong>勤務原価単価とは</strong>旬報のオーダー別集計で「勤務原価」を自動計算するために使用します。わからない場合は空欄のままで問題ありません。後から変更もできます。
-          </div>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-body">
-          <h3>「保存」ボタンを押す</h3>
-          <p>「✓ 保存しました」と表示されれば完了です。次回の入力から氏名・社員番号が自動で入力されます。</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ===== セクション7 ===== -->
-<div class="section" id="sec7">
-  <div class="section-header">
-    <div class="section-num">7</div>
-    <div class="section-title">Excelファイルの内容</div>
-  </div>
-
-  <div class="card">
-    <p style="font-size:13px;color:#555;margin-bottom:16px;">出力されるExcelは2種類あります。</p>
-
-    <div class="excel-preview" style="margin-top:0;">
-      <div class="excel-header-bar">① 残業報告書 Excel（時間外作業報告書）</div>
-      <div class="excel-body">
-        <div style="font-size:12px;color:#555;margin-bottom:8px;">
-          報告者ごとに個別シート ＋ 全員まとめの一覧シートが含まれます。
-        </div>
-        <div style="display:grid;grid-template-columns:70px 60px 80px 90px 130px 60px 60px 80px 80px;gap:1px;font-size:10px;">
-          <div class="excel-cell header">区分</div>
-          <div class="excel-cell header">勤務区分</div>
-          <div class="excel-cell header">日付</div>
-          <div class="excel-cell header">オーダー</div>
-          <div class="excel-cell header">件名</div>
-          <div class="excel-cell header">開始</div>
-          <div class="excel-cell header">終了</div>
-          <div class="excel-cell header">普通残業</div>
-          <div class="excel-cell header">深夜残業</div>
-          <div class="excel-cell">現場作業</div>
-          <div class="excel-cell">常用</div>
-          <div class="excel-cell">2026/5/2</div>
-          <div class="excel-cell">A-001</div>
-          <div class="excel-cell">設備点検</div>
-          <div class="excel-cell">09:00</div>
-          <div class="excel-cell">23:00</div>
-          <div class="excel-cell blue">3.5</div>
-          <div class="excel-cell blue">0.5</div>
-        </div>
-        <div style="font-size:11px;color:#888;margin-top:6px;">ファイル名: 時間外作業報告書_20260504.xlsx</div>
-      </div>
-    </div>
-
-    <div class="excel-preview blue-border" style="margin-top:16px;">
-      <div class="excel-header-bar blue">② 旬報 Excel（旅費交通費等精算書）</div>
-      <div class="excel-body blue-bg">
-        <div style="font-size:12px;color:#555;margin-bottom:8px;">
-          選択した旬の旅費明細 ＋ オーダー別集計が1シートに含まれます。
-        </div>
-        <div style="display:grid;grid-template-columns:80px 70px 110px 60px 60px 60px 70px 80px 70px 70px;gap:1px;font-size:10px;">
-          <div class="excel-cell header-blue">日付</div>
-          <div class="excel-cell header-blue">オーダー</div>
-          <div class="excel-cell header-blue">件名</div>
-          <div class="excel-cell header-blue">区分</div>
-          <div class="excel-cell header-blue">開始</div>
-          <div class="excel-cell header-blue">終了</div>
-          <div class="excel-cell header-blue">日当</div>
-          <div class="excel-cell header-blue">交通機関</div>
-          <div class="excel-cell header-blue">交通費</div>
-          <div class="excel-cell header-blue">小計</div>
-          <div class="excel-cell">2026/5/2</div>
-          <div class="excel-cell">A-001</div>
-          <div class="excel-cell">設備点検</div>
-          <div class="excel-cell">常用</div>
-          <div class="excel-cell">09:00</div>
-          <div class="excel-cell">23:00</div>
-          <div class="excel-cell blue">150</div>
-          <div class="excel-cell">JR</div>
-          <div class="excel-cell blue">420</div>
-          <div class="excel-cell blue">570</div>
-        </div>
-        <div style="font-size:11px;color:#888;margin-top:6px;">ファイル名: 旬報_2026年5月上旬_山田太郎.xlsx</div>
       </div>
     </div>
   </div>
@@ -792,10 +821,318 @@
 <div class="section" id="sec8">
   <div class="section-header">
     <div class="section-num">8</div>
+    <div class="section-title">設定とオーダー台帳</div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:8px;">氏名などを登録する</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:16px;">
+      設定タブで氏名・社員番号・所属を登録しておくと、入力の手間が省けます。<br>
+      登録した内容はこのパソコンに保存され、次回以降も引き継がれます。
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>「設定」タブを開く</h3>
+          <p>画面上部の「設定」タブを押します。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>各項目を入力して「保存」を押す</h3>
+          <div class="form-mock" style="margin-top:12px;">
+            <div class="mock-label">氏名（デフォルト）</div>
+            <div class="mock-input">山田 太郎</div>
+            <div class="mock-label">社員番号</div>
+            <div class="mock-input">1234</div>
+            <div class="mock-label">所属（部署）</div>
+            <div class="mock-input">工事部</div>
+          </div>
+          <p style="font-size:13px;color:#555;margin-top:10px;">「✓ 保存しました」と表示されれば完了です。次回の入力から氏名・社員番号が自動で入り、所属は旬報のExcelに印字されます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:8px;">オーダー台帳を取り込む</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:12px;">
+      オーダー番号を取り込んでおくと、入力フォームでオーダー番号を入れるだけで<strong>件名と日当が自動で入ります</strong>。設定タブの「オーダーマスター」欄で行います。
+    </p>
+
+    <div class="point-box ok">
+      <strong>おすすめ：共有フォルダの台帳と自動連携する</strong>
+      「共有フォルダの台帳と連携する」を押して、共有フォルダにあるオーダー台帳のファイルを<b>1回だけ</b>選んでください。以降は、台帳が更新されるたびアプリが自動で最新の内容にします。毎回取り込み直す必要はありません。
+    </div>
+
+    <div style="font-size:13px;color:#555;line-height:2;margin-top:4px;">
+      連携できていると、緑色で「✓ ファイル名 / ○○件（台帳更新: 日時）」と表示されます。<br>
+      ・すぐに最新にしたいとき → <strong>「今すぐ更新」</strong><br>
+      ・「台帳へのアクセス許可が必要です」と出たとき → <strong>「台帳に再接続」</strong>を押してファイルを選び直す<br>
+      ・連携をやめたいとき → <strong>「連携解除」</strong>（取り込み済みのオーダーは残ります）
+    </div>
+
+    <div class="point-box warn">
+      <strong>自動連携が使えるブラウザ</strong>
+      この自動連携は <b>Chrome / Edge</b> でのみ使えます。それ以外のブラウザでは「このブラウザは台帳の自動連携に非対応です」と表示されるので、下の<b>「ファイルを選んで手動で取り込む」</b>から台帳（.xls / .xlsx）を選んで取り込んでください。台帳が更新されたら、そのつど取り込み直しが必要です。
+    </div>
+
+    <div class="point-box">
+      <strong>1件だけ足したいとき</strong>
+      「手動追加」欄にオーダー番号・件名・担当者・日当を入れて「追加」を押すと、その1件だけ登録できます。台帳のファイルは書き換わりません。
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション9 ===== -->
+<div class="section" id="sec9">
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <div class="section-title">データの取り扱いとバックアップ</div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:12px;">入力したデータはどこにあるの？</h3>
+
+    <div class="point-box ok">
+      <strong>データは自分のパソコンの中だけに保存されます</strong>
+      入力した内容は、使っているパソコンのブラウザの中に保存されます。会社のサーバーやインターネット上には送られません。そのため、<b>ほかの人があなたのデータを見ることはできません</b>し、ほかの人の入力であなたのデータが上書きされることもありません。提出は、出力したExcelを渡すことで行います。
+    </div>
+
+    <div class="point-box warn">
+      <strong>1台のパソコンを複数人で使うときだけ注意</strong>
+      同じパソコンを、<b>同じWindowsのログイン（同じユーザー）</b>で複数人が使うと、全員の入力が同じ一覧に混ざってしまいます。この場合は、入力するときに「報告者氏名」を必ず自分の名前にしてください。氏名ごとにシートが分かれて出力されます。<br>
+      Windowsのログインが人ごとに分かれていれば、データも分かれるので混ざりません。
+    </div>
+
+    <div class="point-box" style="border-color:#e74c3c;background:#fdecea;">
+      <strong>データが消えることがあります</strong>
+      次の場合、入力したデータは消えてしまい、元に戻せません。<br>
+      ・パソコンが故障した／初期化した<br>
+      ・パソコンを入れ替えた（新しいパソコンには引き継がれません）<br>
+      ・ブラウザの「閲覧履歴の削除」でサイトデータを消した<br>
+      <b>旬の途中でも、ときどきバックアップを取ってください。</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="font-size:15px;color:#1a3a5c;margin-bottom:12px;">バックアップと復元のしかた</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:16px;">
+      設定タブの一番下「データ管理」欄で行います。
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>「データをバックアップ」を押す</h3>
+          <p>登録した作業データと設定（氏名・社員番号・所属）が1つのファイルに保存されます。共有フォルダやUSBなど、パソコンとは別の場所に置いておくと安心です。</p>
+          <div style="margin-top:12px;">
+            <div class="btn-mock btn-success" style="font-size:13px;padding:8px 16px;margin-top:0;">データをバックアップ</div>
+          </div>
+          <div style="background:#f8f9fb;border:1px solid #e0e4ea;border-radius:8px;padding:12px;margin-top:8px;font-family:monospace;font-size:13px;color:#555;">
+            旬報バックアップ_山田太郎_20260728.json
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>戻したいときは「バックアップから復元」</h3>
+          <p>保存しておいたファイルを選ぶと、その時点の状態に戻せます。新しいパソコンに移るときも、この操作でデータを引き継げます。</p>
+          <div style="margin-top:12px;">
+            <div class="btn-mock btn-info" style="font-size:13px;padding:8px 16px;margin-top:0;">バックアップから復元</div>
+          </div>
+          <div class="point-box warn" style="margin-top:10px;">
+            <strong>復元は「置き換え」です</strong>
+            今あるデータはバックアップの内容で<b>すべて置き換わります</b>（足し算ではありません）。実行前に確認メッセージが出るので、件数を見てから「OK」を押してください。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="point-box">
+      <strong>オーダーマスターはバックアップに含まれません</strong>
+      オーダーの一覧は台帳から取り込み直せるため、バックアップには入っていません。復元後にオーダーの自動補完が効かないときは、設定タブで台帳を取り込み直してください。
+    </div>
+
+    <div class="point-box" style="border-color:#e74c3c;background:#fdecea;">
+      <strong>「全データを削除」は最後の手段です</strong>
+      設定タブの赤いボタンを押すと、登録した作業データがすべて消え、元に戻せません。押す前に必ずバックアップを取ってください。
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション10 ===== -->
+<div class="section" id="sec10">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <div class="section-title">Excelファイルの内容</div>
+  </div>
+
+  <div class="card">
+    <p style="font-size:13px;color:#555;margin-bottom:16px;">出力されるExcelは2種類あります。どちらも<strong>氏名ごと・旬ごとにシートが分かれます</strong>。</p>
+
+    <div class="excel-preview" style="margin-top:0;">
+      <div class="excel-header-bar">① 残業報告書 Excel（時間外作業報告書）</div>
+      <div class="excel-body">
+        <div style="font-size:12px;color:#555;margin-bottom:8px;">
+          <strong>1つの旬が1枚（A4横1ページ）</strong>に収まります。シートは「氏名＿一旬」のような名前で分かれ、最後に全員分をまとめた「一覧」シートが付きます。<br>
+          用紙の右上には<strong>「確 認 欄」と押印枠が4つ</strong>あり、最大4名まで押印できます。
+        </div>
+        <div style="display:flex;gap:2px;margin-bottom:6px;">
+          <div class="excel-cell header" style="flex:1;text-align:center;">時間外作業報告書</div>
+          <div class="excel-cell header" style="width:40px;text-align:center;">確認欄</div>
+          <div class="excel-cell" style="width:30px;">&nbsp;</div>
+          <div class="excel-cell" style="width:30px;">&nbsp;</div>
+          <div class="excel-cell" style="width:30px;">&nbsp;</div>
+          <div class="excel-cell" style="width:30px;">&nbsp;</div>
+        </div>
+        <div style="overflow-x:auto;">
+          <div style="display:grid;grid-template-columns:56px 56px 48px 66px 110px 56px 56px 62px 62px 74px;gap:1px;font-size:10px;min-width:660px;">
+            <div class="excel-cell header">区分</div>
+            <div class="excel-cell header">勤務区分</div>
+            <div class="excel-cell header">日付</div>
+            <div class="excel-cell header">オーダー №</div>
+            <div class="excel-cell header">件名</div>
+            <div class="excel-cell header">作業開始</div>
+            <div class="excel-cell header">作業終了</div>
+            <div class="excel-cell header">普通残業(H)</div>
+            <div class="excel-cell header">深夜残業(H)</div>
+            <div class="excel-cell header">深夜作業手当(円)</div>
+            <div class="excel-cell">現場作業</div>
+            <div class="excel-cell">常用</div>
+            <div class="excel-cell">7/2</div>
+            <div class="excel-cell">310101</div>
+            <div class="excel-cell">○○新築工事</div>
+            <div class="excel-cell">09:00</div>
+            <div class="excel-cell">23:00</div>
+            <div class="excel-cell blue">3.5</div>
+            <div class="excel-cell blue">0.5</div>
+            <div class="excel-cell blue">0</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px;">ファイル名: 時間外作業報告書_令和8年7月一旬.xlsx</div>
+      </div>
+    </div>
+
+    <div class="excel-preview blue-border" style="margin-top:16px;">
+      <div class="excel-header-bar blue">② 旬報 Excel（旅費交通費等精算書）</div>
+      <div class="excel-body blue-bg">
+        <div style="font-size:12px;color:#555;margin-bottom:8px;">
+          会社の旬報の書式どおりに出力されます。上部に所属・社員NO.・氏名・期間、下部にオーダ別の集計欄と注意書きが入ります。<br>
+          明細に出る列は次の12列です。「自」「至」は勤務時間の開始・終了です。
+        </div>
+        <div style="overflow-x:auto;">
+          <div style="display:grid;grid-template-columns:44px 62px 100px 32px 32px 32px 32px 44px 44px 48px 52px 48px;gap:1px;font-size:10px;min-width:600px;">
+            <div class="excel-cell header-blue">日付</div>
+            <div class="excel-cell header-blue">オーダ番号</div>
+            <div class="excel-cell header-blue">工事名</div>
+            <div class="excel-cell header-blue">常用</div>
+            <div class="excel-cell header-blue">休出</div>
+            <div class="excel-cell header-blue">有給</div>
+            <div class="excel-cell header-blue">代休</div>
+            <div class="excel-cell header-blue">自</div>
+            <div class="excel-cell header-blue">至</div>
+            <div class="excel-cell header-blue">日当</div>
+            <div class="excel-cell header-blue">交通費</div>
+            <div class="excel-cell header-blue">小計</div>
+            <div class="excel-cell">7/2</div>
+            <div class="excel-cell">310101</div>
+            <div class="excel-cell">○○新築工事</div>
+            <div class="excel-cell blue">1</div>
+            <div class="excel-cell"></div>
+            <div class="excel-cell"></div>
+            <div class="excel-cell"></div>
+            <div class="excel-cell">09:00</div>
+            <div class="excel-cell">21:00</div>
+            <div class="excel-cell blue">150</div>
+            <div class="excel-cell blue">420</div>
+            <div class="excel-cell blue">570</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#888;margin-top:6px;">ファイル名: 旬報_令和8年7月一旬_山田太郎.xlsx</div>
+      </div>
+    </div>
+
+    <div class="point-box warn" style="margin-top:16px;">
+      <strong>旬報Excelに出ない項目</strong>
+      <b>宿泊費・交通機関・区間・備考</b>は、この12列に無いため出力されません。入力した内容は旬報タブの画面で確認できます。
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== セクション11 ===== -->
+<div class="section" id="sec11">
+  <div class="section-header">
+    <div class="section-num">11</div>
     <div class="section-title">よくある質問</div>
   </div>
 
   <div class="card">
+
+    <div class="faq-item">
+      <div class="faq-q">登録したデータはブラウザを閉じると消えますか？</div>
+      <div class="faq-a">消えません。入力した内容はパソコンの中に保存され、次にアプリを開いたときもそのまま残っています。ただし、パソコンの故障・入替え・ブラウザの履歴削除では消えてしまうので、設定タブの「データをバックアップ」をときどきご利用ください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">入力した内容は、ほかの人から見えますか？</div>
+      <div class="faq-a">見えません。データは自分のパソコンの中だけに保存され、会社のサーバーやインターネットには送られません。ほかの人の入力で上書きされることもありません。ただし、同じパソコンを同じWindowsログインで複数人が使う場合は、全員の入力が同じ一覧に混ざります。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">パソコンを入れ替えます。データはどうすれば？</div>
+      <div class="faq-a">古いパソコンの設定タブで「データをバックアップ」を押してファイルを保存し、新しいパソコンの設定タブで「バックアップから復元」でそのファイルを選んでください。オーダー台帳は復元に含まれないので、新しいパソコンで取り込み直してください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">登録した内容をあとから直せますか？</div>
+      <div class="faq-a">直せます。「登録済み作業一覧」の「編集」を押すと内容が入力フォームに戻ります。直してから「更新する」を押してください。新しい行は増えず、元の行が書き換わります。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">「同じ氏名・日付・開始時刻の登録が既に存在します」と出て登録できません</div>
+      <div class="faq-a">同じ内容を二重に登録しないための注意表示です。すでに登録済みでないか一覧を確認してください。同じ日に別のオーダーで2件登録したい場合は、開始時間を実際の時間に分けて入力するか、「帰社後にも作業あり」をご利用ください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">残業報告書のExcelが出せません／中身が空です</div>
+      <div class="faq-a">「出力対象」の年月と旬が合っているか確認してください。すぐ下に「出力対象（一旬）: ○件」と表示されます。0件のときはその期間に登録がありません。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">宿泊費や備考が旬報のExcelに出ていません</div>
+      <div class="faq-a">会社の旬報の書式が12列で決まっているためです。入力した内容は旬報タブの画面に表示されるので、そちらで確認できます。ダウンロード前にも確認メッセージが出ます。宿泊費などの精算方法は事務にご確認ください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">オーダー番号を入れても件名や日当が出てきません</div>
+      <div class="faq-a">オーダー台帳がまだ取り込まれていないか、番号が台帳に無い可能性があります。設定タブの「オーダーマスター」で台帳を取り込むか、「手動追加」でその1件を登録してください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">オーダー台帳が更新されたら、取り込み直しが必要ですか？</div>
+      <div class="faq-a">Chrome / Edge で「共有フォルダの台帳と連携する」を済ませていれば不要です。自動で最新になります。それ以外のブラウザでは、台帳が更新されるたびに「ファイルを選んで手動で取り込む」から取り込み直してください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">「CSV」のボタンは何に使うのですか？</div>
+      <div class="faq-a">残業報告書と同じ内容を、表計算ソフトや他のシステムに取り込みやすい形式で保存するためのものです。通常の提出には「残業報告書 Excel」をお使いください。</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">残業報告書の右上にある4つの枠は何ですか？</div>
+      <div class="faq-a">「確認欄」の押印枠です。最大4名まで押印できます。空欄のまま印刷してご提出ください。</div>
+    </div>
 
     <div class="faq-item">
       <div class="faq-q">有給・代休の日も旬報に記録できますか？</div>
@@ -824,7 +1161,7 @@
 
     <div class="faq-item">
       <div class="faq-q">深夜作業手当（一律3,000円）は計算されますか？</div>
-      <div class="faq-a">はい、自動で計算されます。18:00〜翌6:00の常用勤務が5時間以上含まれる場合に「深夜作業手当 3,000円」が表示されます。</div>
+      <div class="faq-a">はい、自動で計算されます。常用の日で、通常勤務の時間（勤務開始から9時間30分の間）のうち18:00〜翌6:00にかかる時間が5時間以上ある場合に「深夜作業手当 3,000円」が表示されます。休出の日には付きません。</div>
     </div>
 
     <div class="faq-item">
@@ -833,13 +1170,13 @@
     </div>
 
     <div class="faq-item">
-      <div class="faq-q">登録したデータはブラウザを閉じると消えますか？</div>
-      <div class="faq-a">はい、消えます。必ずExcelをダウンロードしてから閉じてください。設定（氏名・社員番号など）はブラウザに保存されるので、次回以降も引き継がれます。</div>
+      <div class="faq-q">複数の人のデータをまとめて管理できますか？</div>
+      <div class="faq-a">できます。報告者氏名を分けて登録すれば、Excelダウンロード時に氏名ごと・旬ごとに別シートで出力されます。</div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-q">複数の人のデータをまとめて管理できますか？</div>
-      <div class="faq-a">できます。別々の名前で登録すれば、Excelダウンロード時に報告者ごとに別シートで出力されます。</div>
+      <div class="faq-q">提出はいつまでにすればよいですか？</div>
+      <div class="faq-a">各旬の締め日から3営業日以内に、直近上司 → 所属部長 → 事務の順で提出してください。</div>
     </div>
 
   </div>
@@ -850,7 +1187,7 @@
 </div>
 
 <footer>
-  時間外・旅費精算書アプリ｜使い方マニュアル<br>
+  旬報｜使い方マニュアル<br>
   <span style="opacity:0.6;font-size:11px;margin-top:4px;display:block;">時間外手当基準（原紙）に基づく自動計算　／　旬報（旅費交通費等精算書）対応</span>
 </footer>
 
