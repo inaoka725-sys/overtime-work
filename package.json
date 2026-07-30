@@ -1,0 +1,13 @@
+{
+  "name": "overtime-junpo-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "旬報アプリの計算ロジック回帰テスト。アプリ本体（index.html）は単一HTMLで、実行に npm は不要。",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "devDependencies": {
+    "playwright": "^1"
+  }
+}

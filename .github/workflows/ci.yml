@@ -1,59 +1,31 @@
 name: CI
 
+# 旬報アプリは index.html 単体で動く。ビルドは無いので、検証するのは計算ロジックだけ。
+# 実ブラウザで index.html を読み込み、規程どおりの値になるかを tests/calc.test.mjs で確認する。
+
 on:
   push:
-    branches: [main, develop, 'feature/**']
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
-  frontend:
+  calc-regression:
+    name: 計算ロジックの回帰テスト
     runs-on: ubuntu-latest
-    if: hashFiles('frontend/package.json') != ''
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: 依存関係を取得
         run: npm ci
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
+      - name: ブラウザを取得
+        run: npx playwright install --with-deps chromium
 
-      - name: Lint
-        run: npm run lint --if-present
-
-      - name: Build
-        run: npm run build
-
-  backend-python:
-    runs-on: ubuntu-latest
-    if: hashFiles('backend/requirements.txt') != ''
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Install dev dependencies
-        run: pip install flake8 black mypy
-
-      - name: Lint (flake8)
-        run: flake8 . --max-line-length=120 --ignore=E501,W503 || true
-
-      - name: Format check (black)
-        run: black --check --line-length=120 . || true
+      - name: 回帰テスト
+        run: npm test
