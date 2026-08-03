@@ -1,6 +1,6 @@
 # overtime 開発進捗状況
 
-最終更新: 2026年7月30日
+最終更新: 2026年8月3日
 
 ## 現在の状態
 
@@ -119,7 +119,7 @@
 | 優先度 | 内容 | 担当 |
 |--------|------|------|
 | 高 | **江端さんからの環境回答を受けて設置手順書を作成**（2026/08/03 メール送信済み・返信待ち） | 開発 |
-| 高 | Excelライブラリのアプリ同梱（社内サーバー移行時、CDN取得のままでは動作しない） | 開発 |
+| 済 | ~~Excelライブラリのアプリ同梱~~ **2026/08/03 完了**（vendor/ に同梱、実台帳2,993件で検証済み） | 開発 |
 | 高 | 実機での台帳連携検証（ヘッドレスではOSのファイル選択ダイアログを再現できず未検証） | 開発・江端さん |
 | 高 | 社内サーバー（IIS）への移行 | 江端さん または 保守業者（野田さん） |
 | 中 | 担当者フィールドの帳票への自動転記 | 開発 |
@@ -170,9 +170,9 @@
   - manual.html     # 操作マニュアル
   - overtime/docs/requirements.md     # 要件定義書
   - overtime/docs/SCOPE_PROGRESS.md   # 本ファイル
-外部ライブラリ（CDN。社内サーバー移行時は同梱が必要）:
-  - SheetJS xlsx-latest      — 読込用（window.XLSX_READ）
-  - xlsx-js-style 1.2.0      — 書出用（window.XLSX、スタイル対応・SRI付き）
+外部ライブラリ（vendor/ に同梱済み。外部通信なし）:
+  - vendor/xlsx.full.min.js  — 読込用（window.XLSX_READ、SheetJS 0.20.3）
+  - vendor/xlsx.bundle.js    — 書出用（window.XLSX、xlsx-js-style 0.18.5・SRI付き）
 データ保存:
   - LocalStorage  — 作業データ / 設定 / オーダーマスター / 台帳メタ情報
   - IndexedDB     — オーダー台帳のファイルハンドル

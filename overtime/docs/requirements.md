@@ -1,6 +1,6 @@
 # 要件定義書 — 旬報（時間外・旅費精算書アプリ）
 
-最終更新: 2026年7月28日
+最終更新: 2026年8月3日
 
 ---
 
@@ -38,12 +38,21 @@
 | 労務原価 | 経理・管理部門が旬報上で記入する運用 | 従業員端末に勤務原価単価を置く必要がない（管理者モードの根拠） |
 | 宿泊費 | 会社が予約・精算する | 従業員の入力は不要。旬報Excelの出力対象外 |
 | オーダー台帳 | Windows Server 上に置かれている | 共有フォルダのファイルを直接参照する方式（File System Access API） |
-| ネットワーク | 社内PCはインターネット接続可 | 現時点では CDN からライブラリを取得できる |
+| ネットワーク | 社内PCはインターネット接続可 | ライブラリを同梱済みのため、外部通信は発生しない |
 | クラウド利用 | 元請けからクラウド禁止の指示あり | 社内サーバーへの移行を計画中（下記） |
 
-**社内サーバー移行時の必須対応（未実施・重要）**
-現在 Excel ライブラリを CDN から取得している。社内サーバー（インターネット非接続を想定）へ移行する際は、
-**ライブラリをアプリに同梱する**必要がある。同梱しないまま移行すると Excel の読込・出力がすべて機能しなくなる。
+**Excel ライブラリの同梱（2026/08/03 実施済み）**
+社内サーバーがインターネット非接続でも動くよう、CDN 取得をやめて `vendor/` に同梱した。
+外部への通信は発生しない。SRI（`integrity`）はバイト一致を確認のうえ維持している。
+
+| ファイル | 用途 | バージョン |
+|---|---|---|
+| `vendor/xlsx.full.min.js` | 読込（`window.XLSX_READ`） | SheetJS 0.20.3 |
+| `vendor/xlsx.bundle.js` | 書出（`window.XLSX`、スタイル対応） | xlsx-js-style 0.18.5（パッケージ 1.2.0） |
+
+実ブラウザで検証済み: 実台帳（`【参考用】35期ｵｰﾀﾞｰ台帳.xls`）を `applyOrderWorkbook()` に渡して
+**2,993 件**の取り込みを確認。回帰テスト13件・出力見本の再生成もすべて成功、コンソールエラーなし。
+以後 CDN 取得へ戻さないこと（戻すと社内サーバーで Excel の読込・出力が機能しなくなる）。
 
 ---
 
@@ -88,9 +97,9 @@
 ```yaml
 構成: 単一HTMLファイル（サーバーレス・インストール不要）
 ホスティング: GitHub Pages（社内サーバーへの移行を計画中）
-外部ライブラリ（2枚差し）:
-  読込用: SheetJS xlsx-latest via CDN  → window.XLSX_READ（.xls / .xlsx 台帳の解析）
-  書出用: xlsx-js-style@1.2.0 via CDN  → window.XLSX（罫線・塗り等のスタイル対応）
+外部ライブラリ（2枚差し・vendor/ に同梱。外部通信なし）:
+  読込用: vendor/xlsx.full.min.js（SheetJS 0.20.3） → window.XLSX_READ（.xls / .xlsx 台帳の解析）
+  書出用: vendor/xlsx.bundle.js（xlsx-js-style 0.18.5） → window.XLSX（罫線・塗り等のスタイル対応）
 データ保存: ブラウザ LocalStorage / IndexedDB（サーバー送信なし）
 ```
 
@@ -395,7 +404,7 @@ settings: { name, empNo, dept }
 
 - 静的ファイル配布のため、サーバーサイドセキュリティ要件なし
 - 入力値はブラウザ内のみで処理し、外部送信しない
-- Excel ライブラリを CDN から取得している（オフライン利用・社内サーバー移行時は同梱が必要）
+- Excel ライブラリは vendor/ に同梱済み。ページ表示時に外部へ通信しない（2026/08/03）
 - 書出用ライブラリ（xlsx-js-style）は SRI（integrity 属性）付きで読み込む
 
 ### 勤務原価単価の管理者限定（設計判断）
@@ -425,7 +434,7 @@ PIN は誤操作防止と目隠しにすぎない。初期PINは `index.html` �
 | レイヤー | 技術 |
 |---------|------|
 | フロントエンド | HTML5 / CSS3 / Vanilla JavaScript (ES6+) |
-| Excel読込 | SheetJS (`xlsx-latest` via CDN) → `window.XLSX_READ` |
+| Excel読込 | SheetJS 0.20.3（`vendor/xlsx.full.min.js` 同梱） → `window.XLSX_READ` |
 | Excel書出 | xlsx-js-style 1.2.0 (via jsDelivr, SRI付き) → `window.XLSX` |
 | ファイル連携 | File System Access API + IndexedDB（Chrome / Edge） |
 | ホスティング | GitHub Pages（静的ファイル） |
@@ -436,8 +445,6 @@ PIN は誤操作防止と目隠しにすぎない。初期PINは `index.html` �
 
 | サービス | 用途 | 費用 |
 |---------|------|------|
-| SheetJS CDN (`cdn.sheetjs.com`) | オーダー台帳（.xls/.xlsx）の解析 | 無料 |
-| jsDelivr (`cdn.jsdelivr.net`) | xlsx-js-style（スタイル付きExcel生成） | 無料 |
 | GitHub Pages | Webホスティング | 無料 |
 
 ---
@@ -602,7 +609,6 @@ PIN は誤操作防止と目隠しにすぎない。初期PINは `index.html` �
 
 | 項目 | 内容 | 優先度 |
 |------|------|--------|
-| Excelライブラリの同梱 | 社内サーバー移行時、CDN取得のままでは動作しない | 高 |
 | 実機での台帳連携検証 | ヘッドレス環境ではOSのファイル選択ダイアログを再現できず未検証 | 高 |
 | 社内サーバー（IIS）への移行 | 元請けのクラウド禁止方針への対応 | 高 |
 | 担当者フィールドの帳票への自動転記 | オーダーマスターの担当者を帳票へ反映する | 中 |

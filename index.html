@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>旬報</title>
   <!-- 読込用: 最新版SheetJS（.xls台帳の解析に使用） -->
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="./vendor/xlsx.full.min.js"></script>
   <script>window.XLSX_READ = window.XLSX;</script>
   <!-- 書出用: スタイル（罫線・塗り）対応版。window.XLSX を上書きする -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"
-    integrity="sha384-OUW9euuUyxyHcAhTqbhI+Iyb8LMssXt/cpz0yXhs9UWG2/R/uaWdakx/4cfww7Vb"
-    crossorigin="anonymous"></script>
+  <script src="./vendor/xlsx.bundle.js"
+    integrity="sha384-OUW9euuUyxyHcAhTqbhI+Iyb8LMssXt/cpz0yXhs9UWG2/R/uaWdakx/4cfww7Vb"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic Pro', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
@@ -1999,7 +1998,7 @@ function junpoBody(ws, rows) {
     xPut(ws, r, 0, mdText(e.date), cellS(0));
     xPut(ws, r, 1, e.order || '', cellS(1));
     xPut(ws, r, 2, e.subject || '', cellS(2));
-    const cat = catOf(e), cc = CAT_COL[cat], key = `${e.date} ${cat}`;
+    const cat = catOf(e), cc = CAT_COL[cat], key = `${e.date}\0${cat}`;
     if (cc !== undefined && !counted.has(key)) { counted.add(key); xPut(ws, r, cc, 1, cellS(cc)); }
     // 残業対象外（有給・代休）は既定の勤務時間を印字しない
     if (hasOvertimeCategory(catOf(e))) {
