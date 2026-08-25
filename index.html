@@ -823,7 +823,10 @@ async function ledgerSync(changedOnly) {
       // 読む直前に必ず取り直す。取得後に台帳が保存されると、その File はもう読めない
       file = await ledgerHandle.getFile();
       const meta = ledgerMeta();
-      if (changedOnly && meta.mtime === file.lastModified && meta.size === file.size) return;
+      // エラー中は台帳が変わっていなくても読み直す。読めなかった原因（Excel で開かれていた等）が
+      // 解消しても、台帳自体は変わらないため、これが無いとエラー表示が消えない
+      if (changedOnly && ledgerState.status !== 'error'
+          && meta.mtime === file.lastModified && meta.size === file.size) return;
       try {
         buf = await file.arrayBuffer();   // ここでも NotReadableError が出る。解析の失敗と混ぜない
         break;
