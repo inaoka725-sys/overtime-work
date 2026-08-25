@@ -726,6 +726,10 @@ function importOrderMaster(event) {
       alert('読み込みエラー: ' + err.message);
     }
   };
+  reader.onerror = function() {
+    alert('ファイルを読み取れませんでした。\nほかの方が Excel で台帳を開いている可能性があります。'
+      + '\n閉じていただいてから、もう一度お試しください。');
+  };
   reader.readAsArrayBuffer(file);
   event.target.value = '';
 }
@@ -742,7 +746,31 @@ let ledgerHandle = null;
 let ledgerState = { status: 'none', message: '', name: '', count: 0, mtime: 0 };
 let ledgerTimer = null;
 
-function ledgerSupported() { return typeof window.showOpenFilePicker === 'function'; }
+/* 台帳の自動連携が使えるかを3状態で返す。
+ * 'ok'       使える
+ * 'insecure' http などセキュアコンテキストでないため API そのものが生えていない
+ * 'browser'  セキュアなのに API が無い＝ブラウザが非対応（Firefox / Safari）
+ * showOpenFilePicker はセキュアコンテキスト外では常に undefined になるため、
+ * 有無だけを見ると http 配信を「ブラウザ非対応」と誤って案内してしまう。 */
+function ledgerSupport() {
+  if (typeof window.showOpenFilePicker === 'function') return 'ok';
+  return window.isSecureContext ? 'browser' : 'insecure';
+}
+function ledgerSupported() { return ledgerSupport() === 'ok'; }
+
+/** 自動連携が使えない理由の案内文（改行区切り。alert とHTML表示で共用する） */
+function ledgerUnsupportedText() {
+  if (ledgerSupport() === 'insecure') {
+    return 'このページは安全な接続（セキュア）として扱われていないため、'
+      + '台帳の自動連携をご利用いただけません。\n'
+      + '現在のURL: ' + location.origin + '/\n'
+      + '社内の設定（Chrome ポリシー）がこの端末に届いていない可能性があります。'
+      + '社内のシステムご担当者へご連絡ください。\n'
+      + '下の手動インポートはこのままご利用いただけます。';
+  }
+  return 'このブラウザは台帳の自動連携に非対応です（Chrome / Edge で利用できます）。\n'
+    + '下の手動インポートをご利用ください。';
+}
 
 function ledgerDb() {
   return new Promise((resolve, reject) => {
@@ -769,21 +797,48 @@ function ledgerMeta(v) {
   localStorage.setItem(LEDGER_META_KEY, JSON.stringify(v));
 }
 
+/* 台帳の読み取りで起きた例外を、次に何をすればよいか分かる文言にする。
+ * NotReadableError は台帳が Excel で開かれている／共有フォルダが切れているときに出る。 */
+function ledgerErrorText(err) {
+  const name = err && err.name;
+  if (name === 'NotReadableError')
+    return '台帳ファイルを読み取れませんでした。ほかの方が Excel で台帳を開いている、'
+      + '読み込みの最中に台帳が保存された、または共有フォルダへの接続が切れた可能性があります。'
+      + 'しばらく待ってから［今すぐ更新］をお試しください。';
+  if (name === 'NotFoundError')
+    return '台帳ファイルが見つかりません（移動・削除・名前の変更の可能性）。'
+      + '［台帳に再接続］から選び直してください。';
+  if (name === 'NotAllowedError' || name === 'SecurityError')
+    return '台帳ファイルへのアクセスが許可されていません。［台帳に再接続］をお試しください。';
+  return '台帳ファイルを開けません（共有フォルダに接続できない／移動・削除された可能性）: '
+    + ((err && err.message) || name || '原因不明');
+}
+
 /** 台帳を読み込んで取り込む。changedOnly=true なら lastModified/size が変化した時だけ */
 async function ledgerSync(changedOnly) {
   if (!ledgerHandle) return;
-  let file;
+  let file, buf;
   try {
-    file = await ledgerHandle.getFile();
+    for (let attempt = 0; ; attempt++) {
+      // 読む直前に必ず取り直す。取得後に台帳が保存されると、その File はもう読めない
+      file = await ledgerHandle.getFile();
+      const meta = ledgerMeta();
+      if (changedOnly && meta.mtime === file.lastModified && meta.size === file.size) return;
+      try {
+        buf = await file.arrayBuffer();   // ここでも NotReadableError が出る。解析の失敗と混ぜない
+        break;
+      } catch (err) {
+        // 台帳が保存された直後は一過性で読めないことがある。1度だけ間を置いて取り直す
+        if (attempt >= 1 || !err || err.name !== 'NotReadableError') throw err;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
   } catch (err) {
-    ledgerState = { ...ledgerState, status: 'error',
-      message: '台帳ファイルを開けません（共有フォルダに接続できない／移動・削除された可能性）: ' + err.message };
+    ledgerState = { ...ledgerState, status: 'error', message: ledgerErrorText(err) };
     renderLedgerLink(); return;
   }
-  const meta = ledgerMeta();
-  if (changedOnly && meta.mtime === file.lastModified && meta.size === file.size) return;
   try {
-    const count = applyOrderWorkbook(new Uint8Array(await file.arrayBuffer()));
+    const count = applyOrderWorkbook(new Uint8Array(buf));
     ledgerMeta({ mtime: file.lastModified, size: file.size, name: file.name, count: count });
     ledgerState = { status: 'linked', message: '', name: file.name, count: count, mtime: file.lastModified };
   } catch (err) {
@@ -795,14 +850,19 @@ async function ledgerSync(changedOnly) {
 /** 権限を確認する。interactive=true のときだけ要求できる（クリックハンドラ内で呼ぶこと） */
 async function ledgerPermission(interactive) {
   const opt = { mode: 'read' };
-  if ((await ledgerHandle.queryPermission(opt)) === 'granted') return true;
-  if (!interactive) return false;
-  return (await ledgerHandle.requestPermission(opt)) === 'granted';
+  try {
+    if ((await ledgerHandle.queryPermission(opt)) === 'granted') return true;
+    if (!interactive) return false;
+    return (await ledgerHandle.requestPermission(opt)) === 'granted';
+  } catch (err) {   // 握りつぶすと画面に何も出ないまま止まるため、必ず理由を残す
+    ledgerState = { ...ledgerState, status: 'error', message: ledgerErrorText(err) };
+    return false;
+  }
 }
 
 /** 「共有フォルダの台帳と連携する」: ユーザージェスチャ内から呼ぶこと */
 async function ledgerConnect() {
-  if (!ledgerSupported()) { alert('このブラウザは台帳の自動連携に対応していません。\n手動インポートをご利用ください。'); return; }
+  if (!ledgerSupported()) { alert(ledgerUnsupportedText()); return; }
   try {
     // startIn に UNC パス文字列は渡せない仕様のため指定しない。id で次回以降同じ場所を開く
     const [h] = await window.showOpenFilePicker({ id: 'orderLedger', multiple: false,
@@ -876,9 +936,10 @@ function renderLedgerLink() {
   if (!el) return;
   const manual = document.getElementById('manualImport');
   if (!ledgerSupported()) {
-    el.innerHTML = '<div style="font-size:12px;color:#888;">このブラウザは台帳の自動連携に非対応です'
-      + '（Chrome / Edge で利用できます）。下の手動インポートをご利用ください。</div>';
-    if (manual) manual.open = true;   // 未対応ブラウザでは手動取込を最初から開いておく
+    const insecure = ledgerSupport() === 'insecure';
+    el.innerHTML = `<div style="font-size:12px;color:${insecure ? '#e67e22' : '#888'};line-height:1.7;">`
+      + (insecure ? '⚠ ' : '') + ledgerUnsupportedText().replace(/\n/g, '<br>') + '</div>';
+    if (manual) manual.open = true;   // 使えないときは手動取込を最初から開いておく
     return;
   }
   const btn = (label, fn, cls) =>
@@ -892,7 +953,10 @@ function renderLedgerLink() {
       + `${btn('連携解除','ledgerDisconnect()','btn-danger')}</div>${err}`;
   } else if (ledgerState.status === 'permission') {
     el.innerHTML = '<div style="font-size:13px;color:#e67e22;font-weight:bold;">⚠ 台帳へのアクセス許可が必要です</div>'
-      + `<div style="margin-top:8px;">${btn('台帳に再接続','ledgerReconnect()')}</div>${err}`;
+      + `<div style="margin-top:8px;">${btn('台帳に再接続','ledgerReconnect()')}</div>`
+      + '<div style="font-size:12px;color:#666;margin-top:6px;">'
+      + '許可を求められたら<b>「毎回のアクセスを許可」</b>を選んでください。'
+      + '「今回のみ許可」ではブラウザを閉じるたびに許可が外れます。</div>' + err;
   } else {
     el.innerHTML = '<div style="font-size:12px;color:#666;margin-bottom:8px;">'
       + '共有フォルダの台帳と連携すると、台帳が更新されるたび自動で最新化されます。</div>'
@@ -942,7 +1006,9 @@ async function promptAdminUnlock() {
   if (isAdmin()) return;
   if (new URLSearchParams(location.search).get('admin') !== '1') return;
   if (!window.isSecureContext || !(crypto && crypto.subtle)) {
-    alert('管理者モードは https:// で開いた場合のみ利用できます。');
+    alert('管理者モードは、安全な接続（セキュア）として扱われるページでのみ利用できます。\n'
+      + '現在のURL: ' + location.origin + '/\n'
+      + '社内のシステムご担当者へご連絡ください。');
     return;
   }
   const pin = prompt('管理者PINを入力してください');
