@@ -317,7 +317,8 @@
           </div>
           <div class="point-box warn" style="margin-top:10px;">
             <strong>帰社後の開始時間に注意</strong>
-            帰社後の開始時間は、現場作業の終了時間より前にはできません。前の時間を選んで登録すると「帰社後の開始時間は作業終了時間以降に設定してください」と表示されます。
+            帰社後の開始時間は、現場作業の終了時間より前にはできません。前の時間を選んで登録すると「帰社後の開始時間は作業終了時間以降に設定してください」と表示されます。<br>
+            作業開始より前の時刻（0時以降など）を選ぶと、翌日の作業として扱います（計算結果の欄に「翌日の〜として計算」と表示されます）。作業終了から6時間を超えてあく場合は、打ち間違いを防ぐため「帰社後作業を翌日の〜として登録しますか？」と確認が出ます。翌日で正しければ「OK」、間違いなら「キャンセル」を押して時間を直してください。
           </div>
         </div>
       </div>
@@ -753,12 +754,11 @@
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-body">
-          <h3>対象年月と旬を選んで「表示」を押す</h3>
-          <p>対象の年月と旬（一旬／二旬／三旬／全期間）を選択して「表示」ボタンを押します。</p>
+          <h3>対象年月と旬を選ぶ</h3>
+          <p>対象の年月と旬（一旬／二旬／三旬／全期間）を選択すると、すぐに表示が切り替わります。作業を追加・修正・削除したときも自動で最新の内容になります。</p>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;background:#f8f9fb;border:1px solid #e0e4ea;border-radius:10px;padding:12px;">
             <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">2026-07</div>
             <div style="background:white;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:14px;">一旬（1〜10日）</div>
-            <div style="background:#2980b9;color:white;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:bold;">表示</div>
           </div>
         </div>
       </div>
@@ -1176,7 +1176,7 @@
 
     <div class="faq-item">
       <div class="faq-q">深夜作業手当（一律3,000円）は計算されますか？</div>
-      <div class="faq-a">はい、自動で計算されます。常用の日で、通常勤務の時間（勤務開始から9時間30分の間）のうち18:00〜翌6:00にかかる時間が5時間以上ある場合に「深夜作業手当 3,000円」が表示されます。休出の日には付きません。</div>
+      <div class="faq-a">はい、自動で計算されます。常用の日で、通常勤務の時間（勤務開始から9時間30分の間）のうち18:00〜翌6:00にかかる時間が5時間以上ある場合に「深夜作業手当 3,000円」が表示されます。数えるのは通常勤務のうち実際に勤務した時間だけです（休憩時間は除きます）。9時間30分より早く終わった日は、終了時間までで数えるため短くなります。休出の日には付きません。</div>
     </div>
 
     <div class="faq-item">

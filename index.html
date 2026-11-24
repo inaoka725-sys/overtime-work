@@ -382,19 +382,16 @@
     <h2>旬報（旅費交通費等精算書）</h2>
     <div class="jun-filter">
       <label>対象年月:</label>
-      <input type="month" id="junMonth">
+      <input type="month" id="junMonth" onchange="renderExpenseTab()">
       <label>旬:</label>
-      <select id="junSelect">
+      <select id="junSelect" onchange="renderExpenseTab()">
         <option value="all">全期間</option>
         <option value="upper">一旬（1〜10日）</option>
         <option value="mid">二旬（11〜20日）</option>
         <option value="lower">三旬（21〜末日）</option>
       </select>
-      <button class="btn btn-info btn-sm" style="width:auto;" onclick="renderExpenseTab()">表示</button>
     </div>
-    <div id="expenseContent">
-      <div class="empty-state">対象年月・旬を選択して「表示」を押してください</div>
-    </div>
+    <div id="expenseContent"></div>
   </div>
 
 </div>
@@ -539,18 +536,25 @@ function timeToMin(str) {
 
 function roundToHalf(minutes) { return Math.round(minutes / 30) * 0.5; }
 
-function calcOvertime(startStr, endStr, isHoliday, forcedOvertimeStartMin = null) {
-  let startMin = timeToMin(startStr);
+/** 勤務時間帯を「開始日の0:00起点の分」で返す。終了が開始以前なら翌日扱い */
+function workRange(startStr, endStr) {
+  const startMin = timeToMin(startStr);
   let endMin = timeToMin(endStr);
   if (endMin === 0) endMin = 1440;
   if (endMin <= startMin) endMin += 1440;
+  return { startMin, endMin };
+}
+
+function calcOvertime(startStr, endStr, isHoliday, forcedOvertimeStartMin = null) {
+  const { startMin, endMin } = workRange(startStr, endStr);
   const breaks = getBreaks();
   // 残業起点。実際に勤務していない時間を算入しないよう、勤務開始より前には遡らせない
   const rawStart = forcedOvertimeStartMin !== null ? forcedOvertimeStartMin : (isHoliday ? startMin : startMin + 570);
   const overtimeStart = Math.max(startMin, rawStart);
   if (endMin <= overtimeStart) return { regular: 0, lateNight: 0, overtimeStart };
   let regularMin = 0, lateNightMin = 0;
-  for (let day = 0; day < 3; day++) {
+  // day=-1 は開始日の 0:00〜6:00 の深夜帯（前日22:00〜）を拾うため
+  for (let day = -1; day < 3; day++) {
     const base = day * 1440;
     regularMin += calcEffectiveMinutes(overtimeStart, endMin, 360 + base, 1320 + base, breaks);
     lateNightMin += calcEffectiveMinutes(overtimeStart, endMin, 1320 + base, 1800 + base, breaks);
@@ -558,15 +562,16 @@ function calcOvertime(startStr, endStr, isHoliday, forcedOvertimeStartMin = null
   return { regular: roundToHalf(regularMin), lateNight: roundToHalf(lateNightMin), overtimeStart };
 }
 
-function calcLateNightWorkAllowance(startStr, isHoliday) {
+/** 常用勤務（勤務開始〜残業起点。それより前に終われば終了まで）が18:00〜翌6:00に5時間以上で3,000円 */
+function calcLateNightWorkAllowance(startStr, endStr, isHoliday) {
   if (isHoliday) return 0;
-  const startMin = timeToMin(startStr);
-  const overtimeStart = startMin + 570;
+  const { startMin, endMin } = workRange(startStr, endStr);
+  const regularEnd = Math.min(startMin + 570, endMin);
   const breaks = getBreaks();
   let lateWorkMin = 0;
-  for (let day = 0; day < 3; day++) {
+  for (let day = -1; day < 3; day++) {
     const base = day * 1440;
-    lateWorkMin += calcEffectiveMinutes(startMin, overtimeStart, 1080 + base, 1800 + base, breaks);
+    lateWorkMin += calcEffectiveMinutes(startMin, regularEnd, 1080 + base, 1800 + base, breaks);
   }
   return lateWorkMin >= 300 ? 3000 : 0;
 }
@@ -574,6 +579,12 @@ function calcLateNightWorkAllowance(startStr, isHoliday) {
 function minToTimeStr(min) {
   const h = Math.floor(min / 60) % 24, m = min % 60;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+/** innerHTML へ差し込む文字列は必ずこれを通す（件名の「<」「&」の欠落と、台帳由来の文字列によるXSSを防ぐ） */
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
 // workCategory helpers
@@ -621,16 +632,17 @@ function renderOrderMaster() {
   const display = allEntries.slice(0, 100);
   const more = total > 100 ? `<div style="font-size:12px;color:#888;padding:6px 0;">... 他 ${total - 100} 件（合計 ${total} 件）</div>` : '';
   list.innerHTML = `<div style="font-size:12px;color:#1a3a5c;font-weight:bold;margin-bottom:6px;">計 ${total} 件登録済み</div>` +
-    display.map(([no, d]) => {
-      const safeNo = no.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return `<div class="order-master-row">
-        <div style="font-size:13px;font-weight:bold;flex:1;min-width:80px;">${no}</div>
-        <div style="font-size:13px;color:#555;flex:3;">${d.subject || ''}</div>
-        <div style="font-size:12px;color:#888;flex:1;">${d.assignee || ''}</div>
-        <div style="font-size:13px;width:55px;text-align:right;color:#888;">${d.allowance || 0}円</div>
-        <button class="btn btn-danger" style="padding:3px 10px;font-size:12px;" onclick="deleteOrderMasterEntry('${safeNo}')">削除</button>
-      </div>`;
-    }).join('') + more;
+    display.map(([no, d]) => `<div class="order-master-row">
+        <div style="font-size:13px;font-weight:bold;flex:1;min-width:80px;">${escapeHtml(no)}</div>
+        <div style="font-size:13px;color:#555;flex:3;">${escapeHtml(d.subject)}</div>
+        <div style="font-size:12px;color:#888;flex:1;">${escapeHtml(d.assignee)}</div>
+        <div style="font-size:13px;width:55px;text-align:right;color:#888;">${escapeHtml(d.allowance || 0)}円</div>
+        <button class="btn btn-danger" style="padding:3px 10px;font-size:12px;"
+          data-order="${escapeHtml(no)}">削除</button>
+      </div>`).join('') + more;
+  // オーダー番号を onclick 属性の文字列に埋め込むと「"」等で壊れるため、data 属性から受け取る
+  list.querySelectorAll('button[data-order]').forEach(b =>
+    b.addEventListener('click', () => deleteOrderMasterEntry(b.dataset.order)));
 }
 
 function applyOrderMaster(orderNo, subjectId, allowanceId) {
@@ -941,16 +953,16 @@ function renderLedgerLink() {
   if (!ledgerSupported()) {
     const insecure = ledgerSupport() === 'insecure';
     el.innerHTML = `<div style="font-size:12px;color:${insecure ? '#e67e22' : '#888'};line-height:1.7;">`
-      + (insecure ? '⚠ ' : '') + ledgerUnsupportedText().replace(/\n/g, '<br>') + '</div>';
+      + (insecure ? '⚠ ' : '') + escapeHtml(ledgerUnsupportedText()).replace(/\n/g, '<br>') + '</div>';
     if (manual) manual.open = true;   // 使えないときは手動取込を最初から開いておく
     return;
   }
   const btn = (label, fn, cls) =>
     `<button class="btn ${cls || 'btn-info'} btn-sm" style="width:auto;" onclick="${fn}">${label}</button>`;
   const err = ledgerState.message
-    ? `<div style="font-size:12px;color:#e74c3c;margin-top:6px;">⚠ ${ledgerState.message}</div>` : '';
+    ? `<div style="font-size:12px;color:#e74c3c;margin-top:6px;">⚠ ${escapeHtml(ledgerState.message)}</div>` : '';
   if (ledgerState.status === 'linked') {
-    el.innerHTML = `<div style="font-size:13px;color:#27ae60;font-weight:bold;">✓ ${ledgerState.name}`
+    el.innerHTML = `<div style="font-size:13px;color:#27ae60;font-weight:bold;">✓ ${escapeHtml(ledgerState.name)}`
       + ` / ${ledgerState.count}件（台帳更新: ${ledgerMtimeText(ledgerState.mtime)}）</div>`
       + `<div style="display:flex;gap:8px;margin-top:8px;">${btn('今すぐ更新','ledgerReconnect()')}`
       + `${btn('連携解除','ledgerDisconnect()','btn-danger')}</div>${err}`;
@@ -1034,6 +1046,7 @@ function saveSettings() {
       : (settings.costRate || 0),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  renderExpenseTab();   // 所属・勤務原価単価は旬報タブに表示している
   const msg = document.getElementById('settingsSaved');
   msg.style.display = 'block';
   setTimeout(() => msg.style.display = 'none', 2000);
@@ -1065,6 +1078,7 @@ function switchTab(name) {
     const today = new Date();
     const ym = document.getElementById('junMonth');
     if (!ym.value) ym.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    renderExpenseTab();
   }
 }
 
@@ -1154,7 +1168,7 @@ function getFormValues() {
   const isRoundTrip = document.querySelector('input[name="tripType"]:checked').value === 'roundtrip';
   return {
     date: document.getElementById('inputDate').value,
-    name: document.getElementById('inputName').value,
+    name: document.getElementById('inputName').value.trim(),
     empNo: document.getElementById('inputEmpNo').value,
     order: document.getElementById('inputOrder').value,
     subject: document.getElementById('inputSubject').value,
@@ -1178,6 +1192,25 @@ function getFormValues() {
   };
 }
 
+/** 帰社後の開始時刻が本作業開始より前なら、翌日の作業とみなす */
+function isReturnNextDay(v) { return timeToMin(v.returnStart) < timeToMin(v.start); }
+
+/** 帰社後の開始時刻を本作業と同じ時間軸（本作業の開始日0:00起点の分）で返す */
+function returnStartOnMainAxis(v) {
+  return timeToMin(v.returnStart) + (isReturnNextDay(v) ? 1440 : 0);
+}
+
+/** 本作業終了からこれを超えてあいた翌日の帰社後作業は、打ち間違いの可能性が高いため登録前に確認する */
+const RETURN_NEXT_DAY_CONFIRM_GAP_MIN = 360;
+
+/** 翌日扱いの帰社後作業を登録してよいか。間隔が短ければ確認せず true */
+function confirmReturnNextDay(v) {
+  if (!isReturnNextDay(v)) return true;
+  if (returnStartOnMainAxis(v) - workRange(v.start, v.end).endMin <= RETURN_NEXT_DAY_CONFIRM_GAP_MIN) return true;
+  return confirm(`帰社後の開始時間（${v.returnStart}）が作業開始（${v.start}）より前のため、翌日の作業として扱います。\n`
+    + `帰社後作業を翌日の${v.returnStart}〜${v.returnEnd}として登録しますか？`);
+}
+
 function calcCombinedOvertime(v) {
   if (!hasOvertimeCategory(v.workCategory)) {
     return { mainRegular: 0, mainLateNight: 0, returnRegular: 0, returnLateNight: 0, regular: 0, lateNight: 0, lateNightAllowance: 0, overtimeStart: 0 };
@@ -1186,7 +1219,9 @@ function calcCombinedOvertime(v) {
   const main = calcOvertime(v.start, v.end, isHoliday);
   let returnResult = null;
   if (v.hasReturnWork && v.returnStart && v.returnEnd) {
-    const forcedStart = isHoliday ? timeToMin(v.returnStart) : main.overtimeStart;
+    // 帰社後の時刻は0:00〜24:00で入力されるため、翌日なら本作業の残業起点を1日分戻して軸を揃える
+    const dayShift = returnStartOnMainAxis(v) - timeToMin(v.returnStart);
+    const forcedStart = isHoliday ? timeToMin(v.returnStart) : main.overtimeStart - dayShift;
     const ret = calcOvertime(v.returnStart, v.returnEnd, isHoliday, forcedStart);
     returnResult = { regular: ret.regular, lateNight: ret.lateNight };
   }
@@ -1199,7 +1234,7 @@ function calcCombinedOvertime(v) {
     returnLateNight: returnResult ? returnResult.lateNight : 0,
     regular: totalRegular,
     lateNight: totalLateNight,
-    lateNightAllowance: calcLateNightWorkAllowance(v.start, isHoliday),
+    lateNightAllowance: calcLateNightWorkAllowance(v.start, v.end, isHoliday),
     overtimeStart: main.overtimeStart,
   };
 }
@@ -1214,8 +1249,9 @@ function recalcStoredOvertime() {
   const fixed = [];
   for (const e of entries) {
     // 時刻が欠けた壊れたデータは、空文字が 0:00 と解釈されて過大な値になるため再計算しない
-    if (hasOvertimeCategory(e.workCategory) && (!e.start || !e.end)) continue;
-    const r = calcCombinedOvertime(e);
+    const cat = catOf(e);   // 初期版のデータは workCategory が無く dayType だけを持つ
+    if (hasOvertimeCategory(cat) && (!e.start || !e.end)) continue;
+    const r = calcCombinedOvertime({ ...e, workCategory: cat });
     if (!RECALC_FIELDS.some(k => (e[k] || 0) !== r[k])) continue;
     const diffs = [['普通残業', 'regular', '時間'], ['深夜残業', 'lateNight', '時間'],
       ['深夜作業手当', 'lateNightAllowance', '円']]
@@ -1251,10 +1287,12 @@ function updatePreview() {
     retSection.style.display = 'block';
     document.getElementById('resultReturnRegular').innerHTML = `${result.returnRegular}<span>H</span>`;
     document.getElementById('resultReturnLateNight').innerHTML = `${result.returnLateNight}<span>H</span>`;
-    const isHol = isHolidayCategory(v.workCategory);
-    document.getElementById('resultReturnNote').textContent = isHol
-      ? '帰社後（休出）：全時間が残業対象'
-      : `帰社後：残業開始 ${minToTimeStr(result.overtimeStart)} 適用`;
+    const nextDay = isReturnNextDay(v);
+    const day = nextDay ? `翌日の ${v.returnStart}〜${v.returnEnd} として計算。` : '';
+    const otStart = (nextDay && result.overtimeStart < 1440 ? '前日' : '') + minToTimeStr(result.overtimeStart);
+    document.getElementById('resultReturnNote').textContent = isHoliday
+      ? `帰社後（休出）：${day}全時間が残業対象`
+      : `帰社後：${day}残業開始 ${otStart} 適用`;
   } else {
     retSection.style.display = 'none';
   }
@@ -1331,7 +1369,7 @@ function editEntry(id) {
 
   // 勤務区分・区分ラジオをセット
   ['workCategory', 'workType'].forEach(name => {
-    const val = name === 'workCategory' ? e.workCategory : e.workType;
+    const val = name === 'workCategory' ? catOf(e) : e.workType;
     const radio = document.querySelector(`input[name="${name}"][value="${val}"]`);
     if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
   });
@@ -1374,8 +1412,17 @@ function addEntry() {
   if (!v.date) { alert('日付を入力してください'); return; }
   if (!v.name) { alert('報告者氏名を入力してください'); return; }
   if (hasOvertimeCategory(v.workCategory) && (!v.start || !v.end)) { alert('作業時間を入力してください'); return; }
-  if (v.hasReturnWork && v.returnStart && v.end && timeToMin(v.returnStart) < timeToMin(v.end)) {
+  // 開始=終了は24時間勤務として計算されてしまうため受け付けない
+  if (hasOvertimeCategory(v.workCategory) && v.start === v.end) { alert('作業の開始時間と終了時間が同じです'); return; }
+  if (v.hasReturnWork && v.returnStart && v.returnStart === v.returnEnd) {
+    alert('帰社後の開始時間と終了時間が同じです'); return;
+  }
+  if (v.hasReturnWork && v.returnStart && v.start && v.end
+    && returnStartOnMainAxis(v) < workRange(v.start, v.end).endMin) {
     alert('帰社後の開始時間は作業終了時間以降に設定してください'); return;
+  }
+  if ([v.dailyAllowance, v.transportAmount, v.accommodation].some(n => n < 0)) {
+    alert('日当・交通費・宿泊費にマイナスの金額は入力できません'); return;
   }
 
   // 重複チェック（編集中の自身は除外）
@@ -1383,6 +1430,7 @@ function addEntry() {
     e.id !== editingId && e.name === v.name && e.date === v.date && e.start === v.start
   );
   if (isDuplicate) { alert('同じ氏名・日付・開始時刻の登録が既に存在します'); return; }
+  if (v.hasReturnWork && v.returnStart && v.returnEnd && v.start && v.end && !confirmReturnNextDay(v)) return;
 
   const result = calcCombinedOvertime(v);
   const entryData = {
@@ -1414,6 +1462,7 @@ function addEntry() {
 }
 
 function deleteEntry(id) {
+  if (id === editingId) cancelEdit();   // 編集中の行が消えたまま「更新する」で黙って消えるのを防ぐ
   entries = entries.filter(e => e.id !== id);
   saveEntries(); renderEntries(); updateSummary();
 }
@@ -1462,6 +1511,27 @@ function exportBackup() {
   showBackupStatus(`✓ ${entries.length} 件をバックアップしました（${a.download}）`, '#27ae60');
 }
 
+const BACKUP_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const BACKUP_TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const BACKUP_NUM_FIELDS = [...RECALC_FIELDS, 'dailyAllowance', 'accommodation', 'transportAmount'];
+
+/** 作業データ1件の不正箇所を返す（正常なら空文字）。壊れた行を保存すると以後の起動で落ち続けるため */
+function backupEntryProblem(e, seenIds) {
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return '作業データの形式ではありません';
+  if (!Number.isFinite(e.id)) return 'id がありません';
+  if (seenIds.has(e.id)) return `id（${e.id}）が重複しています`;
+  if (typeof e.date !== 'string' || !BACKUP_DATE_RE.test(e.date)) return '日付が不正です';
+  if (typeof e.name !== 'string' || !e.name.trim()) return '氏名がありません';
+  // workCategory が無い旧データは dayType から判定する（catOf）ため、無いこと自体は許す
+  if (e.workCategory !== undefined && !Object.hasOwn(CAT_LABELS, e.workCategory)) return '勤務区分が不正です';
+  const badTime = ['start', 'end', 'returnStart', 'returnEnd']
+    .find(k => e[k] !== undefined && e[k] !== '' && !BACKUP_TIME_RE.test(e[k]));
+  if (badTime) return `時刻（${badTime}）が不正です`;
+  const badNum = BACKUP_NUM_FIELDS.find(k => e[k] !== undefined && !Number.isFinite(e[k]));
+  if (badNum) return `数値項目（${badNum}）が数値ではありません`;
+  return '';
+}
+
 /** バックアップJSONを検証して返す。不正なら Error を投げる（握り潰さない） */
 function parseBackup(text) {
   let data;
@@ -1470,6 +1540,19 @@ function parseBackup(text) {
   if (data.format !== BACKUP_FORMAT) throw new Error('このアプリのバックアップファイルではありません');
   if (data.version !== BACKUP_VERSION) throw new Error(`未対応のバージョンです（version: ${data.version}）`);
   if (!Array.isArray(data.entries)) throw new Error('作業データが含まれていません');
+  const seenIds = new Set();
+  data.entries.forEach((e, i) => {
+    const problem = backupEntryProblem(e, seenIds);
+    if (problem) throw new Error(`作業データ ${i + 1} 件目: ${problem}`);
+    seenIds.add(e.id);
+  });
+  if (data.settings !== undefined) {
+    const st = data.settings;
+    if (!st || typeof st !== 'object' || Array.isArray(st)
+      || ['name', 'empNo', 'dept'].some(k => st[k] !== undefined && typeof st[k] !== 'string')) {
+      throw new Error('設定（氏名・社員番号・所属）の形式が不正です');
+    }
+  }
   return data;
 }
 
@@ -1491,6 +1574,7 @@ function importBackup(event) {
       + '置き換えます。この操作は取り消せません。よろしいですか？')) return;
     entries = data.entries;
     saveEntries();
+    recalcStoredOvertime();   // 古いバックアップの残業時間を、起動時と同じく現在の計算ロジックで正す
     if (data.settings && typeof data.settings === 'object') {
       // costRate はバックアップに含まれない。この端末の既存値を維持する
       settings = Object.assign({}, data.settings, { costRate: settings.costRate || 0 });
@@ -1518,14 +1602,15 @@ function renderEntries() {
       <div class="entry-header">
         <div>
           <div class="entry-date">${formatDate(e.date)}</div>
-          <div class="entry-title">${e.name}${e.empNo ? `　<span style="font-size:13px;color:#666;">（${e.empNo}）</span>` : ''}</div>
+          <div class="entry-title">${escapeHtml(e.name)}${e.empNo
+            ? `　<span style="font-size:13px;color:#666;">（${escapeHtml(e.empNo)}）</span>` : ''}</div>
           <div class="entry-details" style="margin-top:6px;">
-            <span class="badge ${CAT_BADGE[cat]}">${CAT_LABELS[cat] || cat}</span>
+            <span class="badge ${CAT_BADGE[cat]}">${escapeHtml(CAT_LABELS[cat] || cat)}</span>
             <span class="badge ${e.workType === 'onsite' ? 'badge-onsite' : 'badge-office'}" style="margin-left:4px;">
               ${e.workType === 'onsite' ? '現場作業' : '社内作業'}
             </span>
           </div>
-          ${e.subject ? `<div class="entry-details">${e.subject}</div>` : ''}
+          ${e.subject ? `<div class="entry-details">${escapeHtml(e.subject)}</div>` : ''}
         </div>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-warning btn-sm" onclick="editEntry(${e.id})">編集</button>
@@ -1534,8 +1619,8 @@ function renderEntries() {
       </div>
       ${hasOvertimeCategory(cat) ? `
       <div style="margin-bottom:${e.hasReturnWork ? '8px' : '0'};">
-        <div class="entry-details">${e.start} ～ ${e.end}</div>
-        ${e.order ? `<div class="entry-details" style="color:#888;">No. ${e.order}</div>` : ''}
+        <div class="entry-details">${escapeHtml(e.start)} ～ ${escapeHtml(e.end)}</div>
+        ${e.order ? `<div class="entry-details" style="color:#888;">No. ${escapeHtml(e.order)}</div>` : ''}
         <div class="entry-hours">
           <div class="hour-item"><div class="h-label">普通残業</div><div class="h-value">${e.mainRegular}</div><div class="h-unit">H</div></div>
           <div class="hour-item"><div class="h-label">深夜残業</div><div class="h-value">${e.mainLateNight}</div><div class="h-unit">H</div></div>
@@ -1550,20 +1635,21 @@ function renderEntries() {
       ${e.hasReturnWork ? `
       <div style="border-top:1px dashed #b2dfcc; padding-top:8px;">
         <div style="font-size:12px;font-weight:bold;color:#27ae60;margin-bottom:4px;">帰社後作業</div>
-        <div class="entry-details">${e.returnStart} ～ ${e.returnEnd}</div>
-        ${e.returnOrder ? `<div class="entry-details" style="color:#888;">No. ${e.returnOrder}</div>` : ''}
-        ${e.returnSubject ? `<div class="entry-details">${e.returnSubject}</div>` : ''}
+        <div class="entry-details">${escapeHtml(e.returnStart)} ～ ${escapeHtml(e.returnEnd)}</div>
+        ${e.returnOrder ? `<div class="entry-details" style="color:#888;">No. ${escapeHtml(e.returnOrder)}</div>` : ''}
+        ${e.returnSubject ? `<div class="entry-details">${escapeHtml(e.returnSubject)}</div>` : ''}
         <div class="entry-hours">
           <div class="hour-item"><div class="h-label">普通残業</div><div class="h-value">${e.returnRegular}</div><div class="h-unit">H</div></div>
           <div class="hour-item"><div class="h-label">深夜残業</div><div class="h-value">${e.returnLateNight}</div><div class="h-unit">H</div></div>
         </div>
       </div>` : ''}
-      ` : `<div style="font-size:13px;color:#888;padding:4px 0;">${e.start} ～ ${e.end}（${CAT_LABELS[cat]}）</div>`}
+      ` : `<div style="font-size:13px;color:#888;padding:4px 0;">${escapeHtml(e.start)} ～ ${escapeHtml(e.end)}`
+        + `（${escapeHtml(CAT_LABELS[cat])}）</div>`}
       ${expenseTotal > 0 ? `
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8d5b0;font-size:12px;color:#7a5c00;">
         旅費: ${expenseTotal.toLocaleString()}円
         ${e.dailyAllowance > 0 ? ` 日当:${e.dailyAllowance}円` : ''}
-        ${e.transportAmount > 0 ? ` 交通費:${e.transportAmount}円（${e.transportRoute || ''}）` : ''}
+        ${e.transportAmount > 0 ? ` 交通費:${e.transportAmount}円（${escapeHtml(e.transportRoute)}）` : ''}
         ${e.accommodation > 0 ? ` 宿泊費:${e.accommodation}円` : ''}
       </div>` : ''}
     </div>`;
@@ -1574,6 +1660,7 @@ function updateSummary() {
   const card = document.getElementById('summaryCard');
   const overtime = entries.filter(e => hasOvertimeCategory(catOf(e)));
   updateExportSummary();
+  renderExpenseTab();   // 全データ変更経路がここを通る。旬報タブに削除前の行が残らないようにする
   if (overtime.length === 0) { card.style.display = 'none'; return; }
   card.style.display = 'block';
   document.getElementById('totalCount').textContent = overtime.length;
@@ -1620,64 +1707,20 @@ function renderExpenseTab() {
     return;
   }
 
-  // 明細テーブル
-  const rows = filtered.map(e => {
-    const cat = catOf(e);
-    const subtotal = expenseSubtotal(e);
-    return `<tr>
-      <td>${formatDate(e.date)}</td>
-      <td>${e.order || ''}</td>
-      <td>${e.subject || ''}</td>
-      <td>${CAT_LABELS[cat] || cat}</td>
-      <td>${e.start || ''}〜${e.end || ''}</td>
-      <td style="text-align:right;">${e.dailyAllowance > 0 ? e.dailyAllowance.toLocaleString() : '—'}</td>
-      <td>${e.transportType || ''}</td>
-      <td>${e.transportRoute || ''}</td>
-      <td style="text-align:right;">${e.transportAmount > 0 ? e.transportAmount.toLocaleString() : '—'}</td>
-      <td style="text-align:right;">${e.accommodation > 0 ? e.accommodation.toLocaleString() : '—'}</td>
-      <td style="text-align:right;font-weight:bold;">${subtotal > 0 ? subtotal.toLocaleString() : '—'}</td>
-      <td>${e.remarks || ''}</td>
-    </tr>`;
-  }).join('');
-
+  const rows = expenseDetailRowsHtml(filtered);
   const totalDaily = filtered.reduce((s,e) => s + (e.dailyAllowance || 0), 0);
   const totalTransport = filtered.reduce((s,e) => s + (e.transportAmount || 0), 0);
   const totalAccom = filtered.reduce((s,e) => s + (e.accommodation || 0), 0);
   const grandTotal = totalDaily + totalTransport + totalAccom;
-
-  // オーダー別集計
-  const byOrder = {};
-  filtered.forEach(e => {
-    // オーダー番号が空でも金額があれば計上する（除外すると明細の合計と一致しなくなる）
-    const key = String(e.order || '').trim() || NO_ORDER_LABEL;
-    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', dates: {}, transport: 0, allowance: 0 };
-    // 日数は「常用・休出の日付ユニーク数」（同日を複数エントリーに分けても1日、有給・代休は除外）
-    if (hasOvertimeCategory(catOf(e))) byOrder[key].dates[e.date] = 1;
-    byOrder[key].transport += e.transportAmount || 0;
-    byOrder[key].allowance += e.dailyAllowance || 0;
-  });
   // 単価が無い端末では「勤務原価」列そのものを出さない（単価の存在を知らせない）
   const costRate = settings.costRate || 0;
-  const orderRows = Object.entries(byOrder).map(([order, d]) => {
-    d.days = Object.keys(d.dates).length;
-    return [order, d];
-  }).filter(([, d]) => d.days > 0 || (d.transport + d.allowance) !== 0)   // 日数0かつ金額0の行だけ落とす
-    .map(([order, d]) => {
-    return `<tr>
-      <td>${order}</td>
-      <td>${d.subject}</td>
-      <td style="text-align:right;">${d.days}日</td>
-      <td style="text-align:right;">${d.transport.toLocaleString()}円</td>
-      <td style="text-align:right;">${d.allowance.toLocaleString()}円</td>
-      ${costRate > 0 ? `<td style="text-align:right;">${(d.days * costRate).toLocaleString()}円</td>` : ''}
-    </tr>`;
-  }).join('');
+  const orderRows = expenseOrderRowsHtml(filtered, costRate);
 
   const reiwa = y - 2018;
   content.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div style="font-size:14px;font-weight:bold;color:#1a3a5c;">
-        令和${reiwa}年${m}月 ${JUN_LABELS[jun]}　${uniqueNames(filtered).join('・')}　${settings.dept || ''}
+        令和${reiwa}年${m}月 ${JUN_LABELS[jun]}　${escapeHtml(uniqueNames(filtered).join('・'))}　${escapeHtml(settings.dept)}
       </div>
       <button class="btn btn-success btn-sm" style="width:auto;" onclick="exportExpenseExcel()">
         旬報 Excel ダウンロード
@@ -1711,6 +1754,56 @@ function renderExpenseTab() {
       </table>
     </div>
   `;
+}
+
+/** 旬報タブの明細テーブルの行 */
+function expenseDetailRowsHtml(filtered) {
+  return filtered.map(e => {
+    const cat = catOf(e);
+    const subtotal = expenseSubtotal(e);
+    return `<tr>
+      <td>${formatDate(e.date)}</td>
+      <td>${escapeHtml(e.order)}</td>
+      <td>${escapeHtml(e.subject)}</td>
+      <td>${escapeHtml(CAT_LABELS[cat] || cat)}</td>
+      <td>${escapeHtml(e.start)}〜${escapeHtml(e.end)}</td>
+      <td style="text-align:right;">${e.dailyAllowance > 0 ? e.dailyAllowance.toLocaleString() : '—'}</td>
+      <td>${escapeHtml(e.transportType)}</td>
+      <td>${escapeHtml(e.transportRoute)}</td>
+      <td style="text-align:right;">${e.transportAmount > 0 ? e.transportAmount.toLocaleString() : '—'}</td>
+      <td style="text-align:right;">${e.accommodation > 0 ? e.accommodation.toLocaleString() : '—'}</td>
+      <td style="text-align:right;font-weight:bold;">${subtotal > 0 ? subtotal.toLocaleString() : '—'}</td>
+      <td>${escapeHtml(e.remarks)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/** 旬報タブのオーダー別集計の行（costRate が 0 なら勤務原価列を出さない） */
+function expenseOrderRowsHtml(filtered, costRate) {
+  const byOrder = {};
+  filtered.forEach(e => {
+    // オーダー番号が空でも金額があれば計上する（除外すると明細の合計と一致しなくなる）
+    const key = String(e.order || '').trim() || NO_ORDER_LABEL;
+    if (!byOrder[key]) byOrder[key] = { subject: e.subject || '', dates: {}, transport: 0, allowance: 0 };
+    // 日数は「常用・休出の日付ユニーク数」（同日を複数エントリーに分けても1日、有給・代休は除外）
+    if (hasOvertimeCategory(catOf(e))) byOrder[key].dates[e.date] = 1;
+    byOrder[key].transport += e.transportAmount || 0;
+    byOrder[key].allowance += e.dailyAllowance || 0;
+  });
+  return Object.entries(byOrder).map(([order, d]) => {
+    d.days = Object.keys(d.dates).length;
+    return [order, d];
+  }).filter(([, d]) => d.days > 0 || (d.transport + d.allowance) !== 0)   // 日数0かつ金額0の行だけ落とす
+    .map(([order, d]) => {
+    return `<tr>
+      <td>${escapeHtml(order)}</td>
+      <td>${escapeHtml(d.subject)}</td>
+      <td style="text-align:right;">${d.days}日</td>
+      <td style="text-align:right;">${d.transport.toLocaleString()}円</td>
+      <td style="text-align:right;">${d.allowance.toLocaleString()}円</td>
+      ${costRate > 0 ? `<td style="text-align:right;">${(d.days * costRate).toLocaleString()}円</td>` : ''}
+    </tr>`;
+  }).join('');
 }
 
 // ===== Excel 共通ヘルパ（罫線・塗り・印刷設定） =====

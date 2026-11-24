@@ -116,13 +116,53 @@ test('休出の帰社後作業は帰社後自身の開始時刻が起点（2026/
 
 test('深夜作業手当は常用で18:00-翌6:00の在籍が5時間以上のとき一律3,000円', async () => {
   const got = await evalIn(() => ({
-    常用16時始まり: calcLateNightWorkAllowance('16:00', false),
-    常用9時始まり: calcLateNightWorkAllowance('09:00', false),
-    休出16時始まり: calcLateNightWorkAllowance('16:00', true),
+    常用16時始まり: calcLateNightWorkAllowance('16:00', '02:00', false),
+    常用9時始まり: calcLateNightWorkAllowance('09:00', '23:00', false),
+    休出16時始まり: calcLateNightWorkAllowance('16:00', '02:00', true),
+    常用0時始まり: calcLateNightWorkAllowance('00:00', '09:30', false),
   }));
   assert.equal(got.常用16時始まり, 3000);
   assert.equal(got.常用9時始まり, 0);
   assert.equal(got.休出16時始まり, 0, '休出は常に0');
+  assert.equal(got.常用0時始まり, 3000, '0:00-6:00 の5時間（2:00-3:00休憩控除）も数える');
+});
+
+test('深夜作業手当は実際の勤務時間だけで判定する（常用 20:00-22:00 の短時間勤務には付かない）', async () => {
+  const got = await evalIn(() => [
+    ['20:00', '22:00'], ['18:00', '23:30'], ['18:00', '00:00'], ['16:00', '22:00'],
+  ].map(([s, e]) => calcLateNightWorkAllowance(s, e, false)));
+  assert.deepEqual(got, [0, 0, 3000, 0], '18:00-24:00 は休憩2回(各30分)を引いて丁度5時間、23:30終了は4.5時間');
+});
+
+// ===== 開始日の 0:00〜6:00（深夜帯の取りこぼし） =====
+
+test('休出の 0:00〜6:00 は深夜残業に数える', async () => {
+  const got = await evalIn(() => ({
+    休出4時から8時: calcOvertime('04:00', '08:00', true),
+    休出0時から6時: calcOvertime('00:00', '06:00', true),
+  }));
+  assert.equal(got.休出4時から8時.lateNight, 2.0, '4:00-6:00');
+  assert.equal(got.休出4時から8時.regular, 1.5, '6:00-8:00 から 6:00-6:30 の休憩を控除');
+  assert.equal(got.休出0時から6時.lateNight, 5.0, '2:00-3:00 の休憩を控除');
+  assert.equal(got.休出0時から6時.regular, 0);
+});
+
+// ===== 0時をまたぐ帰社後作業（本作業と同じ時間軸で扱う） =====
+
+const RETURN_CASES = [
+  // [区分, 本作業, 帰社後, 期待する帰社後の普通H, 深夜H]
+  ['regular', '09:00', '01:00', '01:30', '03:00', 0, 0.5],
+  ['regular', '21:00', '07:00', '08:00', '10:00', 1.5, 0],
+  ['holiday_work', '08:00', '01:00', '01:30', '04:00', 0, 1.5],
+  ['regular', '09:00', '23:00', '00:00', '02:00', 0, 2.0],
+];
+
+test('帰社後作業が0時をまたいで翌日になっても残業を計上する', async () => {
+  const got = await evalIn((cases) => cases.map(([workCategory, start, end, returnStart, returnEnd]) => {
+    const r = calcCombinedOvertime({ workCategory, start, end, hasReturnWork: true, returnStart, returnEnd });
+    return [r.returnRegular, r.returnLateNight];
+  }), RETURN_CASES);
+  assert.deepEqual(got, RETURN_CASES.map(c => [c[5], c[6]]));
 });
 
 // ===== 旬の判定 =====
@@ -248,6 +288,220 @@ test('保存済みの古い残業時間を起動時に再計算し、冪等で�
   assert.deepEqual(got.after1[2], { id: 3, regular: 0, lateNight: 0 },
     '時刻が欠けた行は空文字が0:00と解釈されて過大値になるため再計算しない');
   assert.deepEqual(got.after2, got.after1, '再実行しても値が変わらない（冪等）');
+});
+
+// ===== 画面操作（入力チェック・旬報タブ・表示のエスケープ） =====
+
+/** テスト間で状態を持ち越さないよう、作業データを空にして画面を描き直す */
+const resetEntries = () => evalIn(() => {
+  cancelEdit(); entries = []; saveEntries(); renderEntries(); updateSummary();
+});
+
+/** 入力フォームへ値を入れて「追加」を押し、出た alert の文言を返す */
+async function submitForm(f) {
+  await page.click('.tab-btn:has-text("残業報告書")');
+  await page.fill('#inputDate', f.date);
+  await page.fill('#inputName', f.name);
+  await page.fill('#inputSubject', f.subject || '');
+  await page.selectOption('#inputStart', f.start);
+  await page.selectOption('#inputEnd', f.end);
+  if (f.returnStart) {
+    await page.check('#hasReturnWork');
+    await page.selectOption('#inputReturnStart', f.returnStart);
+    await page.selectOption('#inputReturnEnd', f.returnEnd);
+  }
+  await page.fill('#inputDailyAllowance', String(f.dailyAllowance ?? 0));
+  await evalIn(() => { window.__alerts = []; window.alert = m => window.__alerts.push(m); });
+  await page.click('#addEntryBtn');
+  return evalIn(() => window.__alerts);
+}
+
+test('入力チェック: 開始=終了・マイナス金額を拒否し、0時をまたぐ帰社後作業は受け付ける。氏名は前後の空白を除く',
+  async () => {
+    await resetEntries();
+    const base = { date: '2026-06-05', name: '  テスト太郎 ', start: '09:00', end: '23:00' };
+    const same = await submitForm({ ...base, start: '09:00', end: '09:00' });
+    const minus = await submitForm({ ...base, dailyAllowance: -300 });
+    const before = await submitForm({ ...base, end: '20:00', returnStart: '19:00', returnEnd: '21:00' });
+    const ok = await submitForm({ ...base, returnStart: '00:00', returnEnd: '02:00' });
+    const saved = await evalIn(() => entries.map(e => ({ name: e.name, lateNight: e.returnLateNight })));
+    await resetEntries();
+    assert.equal(same.length, 1, '開始=終了は24時間勤務として計算されるため拒否');
+    assert.equal(minus.length, 1, '日当のマイナスは拒否');
+    assert.match(before[0] || '', /帰社後の開始時間/, '作業終了より前の帰社後開始は拒否');
+    assert.deepEqual(ok, [], '翌0:00からの帰社後作業は受け付ける');
+    assert.deepEqual(saved, [{ name: 'テスト太郎', lateNight: 2 }]);
+  });
+
+test('旬報タブは作業の追加・削除に追随する（削除した行が残らない）', async () => {
+  await resetEntries();
+  await submitForm({ date: '2026-06-05', name: 'テスト', subject: '旬報追随テスト', start: '09:00', end: '20:00' });
+  await page.click('.tab-btn:has-text("旬報")');
+  await page.fill('#junMonth', '2026-06');
+  await page.dispatchEvent('#junMonth', 'change');
+  await page.selectOption('#junSelect', 'all');
+  const rowsAfterAdd = await page.locator('#expenseContent .expense-table').first().locator('tbody tr').count();
+  await page.click('.tab-btn:has-text("残業報告書")');
+  await page.click('#entriesList .btn-danger');
+  await page.click('.tab-btn:has-text("旬報")');
+  const afterDelete = await page.textContent('#expenseContent');
+  await resetEntries();
+  assert.equal(rowsAfterAdd, 1);
+  assert.match(afterDelete, /該当するデータがありません/);
+  assert.doesNotMatch(afterDelete, /旬報追随テスト/);
+});
+
+test('編集中の行を削除すると編集モードを解除する（「更新する」で黙って消えない）', async () => {
+  await resetEntries();
+  await submitForm({ date: '2026-06-05', name: 'テスト', start: '09:00', end: '20:00' });
+  const got = await evalIn(() => {
+    const id = entries[0].id;
+    editEntry(id);
+    deleteEntry(id);
+    return { editingId, button: document.getElementById('addEntryBtn').textContent };
+  });
+  await resetEntries();
+  assert.deepEqual(got, { editingId: null, button: 'この内容を追加' });
+});
+
+test('件名などの記号はそのまま表示し、HTMLとして解釈しない（XSS対策）', async () => {
+  await resetEntries();
+  const subject = '配管工事<第2期> & A<B';
+  await submitForm({ date: '2026-06-05', name: 'テスト', subject, start: '09:00', end: '20:00' });
+  const got = await evalIn(() => {
+    const saved = orderMaster;
+    orderMaster = { 'A"1': { subject: '<img src=x onerror="window.__xss=1">', assignee: '', allowance: 0 } };
+    renderOrderMaster();
+    const master = document.getElementById('orderMasterList');
+    const res = { masterText: master.textContent, img: master.querySelectorAll('img').length };
+    master.querySelector('button[data-order]').click();   // 「"」を含むオーダー番号でも削除できる
+    res.left = Object.keys(orderMaster).length;
+    orderMaster = saved;
+    saveOrderMaster();
+    renderOrderMaster();
+    return { ...res, list: document.getElementById('entriesList').textContent,
+      expense: document.getElementById('expenseContent').textContent };
+  });
+  await resetEntries();
+  assert.ok(got.list.includes(subject), '登録一覧で件名が欠けない');
+  assert.ok(got.expense.includes(subject), '旬報タブで件名が欠けない');
+  assert.equal(got.img, 0, 'マスター件名の <img> がタグとして生成されない');
+  assert.ok(got.masterText.includes('<img src=x'));
+  assert.equal(got.left, 0, '「"」入りのオーダー番号も削除できる');
+});
+
+test('不正なバックアップは理由を示して復元を中止し、既存データを壊さない', async () => {
+  await resetEntries();
+  await submitForm({ date: '2026-06-05', name: '既存', start: '09:00', end: '20:00' });
+  const bad = JSON.stringify({ format: 'overtime-backup', version: 1, entries: [{ name: 'x' }] });
+  await page.click('.tab-btn:has-text("設定")');
+  await page.setInputFiles('#backupFile', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from(bad) });
+  await page.waitForFunction(() => document.getElementById('backupStatus').style.display === 'block');
+  const got = await evalIn(() => ({
+    status: document.getElementById('backupStatus').textContent,
+    stored: JSON.parse(localStorage.getItem(STORAGE_KEY)).map(e => e.name),
+    validOk: (() => { try { parseBackup(JSON.stringify({ format: 'overtime-backup', version: 1,
+      entries, settings: { name: 'a' } })); return true; } catch (e) { return e.message; } })(),
+    dupId: (() => { try { parseBackup(JSON.stringify({ format: 'overtime-backup', version: 1,
+      entries: [entries[0], entries[0]] })); return ''; } catch (e) { return e.message; } })(),
+  }));
+  await resetEntries();
+  assert.match(got.status, /1 件目/);
+  assert.deepEqual(got.stored, ['既存'], '不正なファイルでは置き換えない');
+  assert.equal(got.validOk, true, 'このアプリが書き出した形式は通る');
+  assert.match(got.dupId, /2 件目.*重複/);
+});
+
+// ===== 翌日扱いの帰社後作業の確認 =====
+
+/** confirm の応答を固定して submitForm し、出た confirm の文言と登録結果を返す */
+async function submitWithConfirm(f, answer) {
+  await resetEntries();
+  await evalIn((a) => { window.__confirms = []; window.confirm = m => { window.__confirms.push(m); return a; }; },
+    answer);
+  const alerts = await submitForm(f);
+  return evalIn((al) => ({
+    alerts: al, confirms: window.__confirms,
+    saved: entries.map(e => [e.returnRegular, e.returnLateNight]),
+  }), alerts);
+}
+
+test('翌日扱いで本作業終了から6時間を超えてあく帰社後作業は確認し、キャンセルなら登録しない', async () => {
+  const far = { date: '2026-06-05', name: 'テスト', start: '09:00', end: '20:00', returnStart: '08:00',
+    returnEnd: '10:00' };
+  const rejected = await submitWithConfirm(far, false);
+  const note = await evalIn(() => { updatePreview(); return document.getElementById('resultReturnNote').textContent; });
+  const accepted = await submitWithConfirm(far, true);
+  await resetEntries();
+  assert.equal(rejected.confirms.length, 1);
+  assert.match(rejected.confirms[0], /翌日の08:00〜10:00として登録しますか/);
+  assert.deepEqual(rejected.saved, [], 'キャンセルなら登録しない');
+  assert.match(note, /翌日の 08:00〜10:00 として計算/, 'プレビューでも翌日扱いと分かる');
+  assert.equal(accepted.confirms.length, 1);
+  assert.deepEqual(accepted.saved, [[1.5, 0]], '受諾なら翌日 8:00-10:00（8:30-9:00休憩控除）で登録');
+});
+
+test('本作業終了から6時間以内の翌日の帰社後作業は確認なしで登録する', async () => {
+  const cases = [['09:00', '23:00', '00:00', '02:00'], ['09:00', '01:00', '01:30', '03:00']];
+  const got = [];
+  for (const [start, end, returnStart, returnEnd] of cases) {
+    got.push(await submitWithConfirm({ date: '2026-06-05', name: 'テスト', start, end, returnStart, returnEnd },
+      false));
+  }
+  await resetEntries();
+  assert.deepEqual(got.map(g => g.confirms), [[], []]);
+  assert.deepEqual(got.map(g => g.saved), [[[0, 2]], [[0, 0.5]]]);
+});
+
+// ===== 初期版（workCategory 無し・dayType のみ）のデータ =====
+
+/** 初期版 cf04ebd が保存していた形のエントリー */
+const legacyEntry = (id, dayType, start, end, regular, lateNight) => ({
+  id, date: `2026-04-0${id}`, name: '旧データ', order: '', subject: '', workType: 'onsite', dayType, start, end,
+  hasReturnWork: false, returnOrder: '', returnSubject: '', returnStart: '20:00', returnEnd: '22:00',
+  mainRegular: regular, mainLateNight: lateNight, returnRegular: 0, returnLateNight: 0,
+  regular, lateNight, lateNightAllowance: 0,
+});
+
+test('初期版のデータ（dayType のみ）を起動時の再計算で残業0に潰さない', async () => {
+  const got = await evalIn((rows) => {
+    entries = rows;
+    let notified = 0;
+    const orig = window.alert;
+    window.alert = () => { notified++; };
+    recalcStoredOvertime();
+    window.alert = orig;
+    const res = { notified, vals: entries.map(e => [e.regular, e.lateNight]) };
+    editEntry(2);
+    res.editCat = document.querySelector('input[name="workCategory"]:checked').value;
+    cancelEdit();
+    return res;
+  }, [legacyEntry(1, 'weekday', '09:15', '23:00', 3.5, 0.5), legacyEntry(2, 'holiday', '09:00', '18:00', 7.5, 0)]);
+  await resetEntries();
+  assert.deepEqual(got.vals, [[3.5, 0.5], [7.5, 0]], '平日=常用、休日=休出として計算し、正しい保存値はそのまま');
+  assert.equal(got.notified, 0, '差分が無いので通知しない');
+  assert.equal(got.editCat, 'holiday_work', '編集時も休日は休出として開く');
+});
+
+test('バックアップの復元直後に古い残業時間を現在の計算ロジックで正す', async () => {
+  await resetEntries();
+  const stale = { ...legacyEntry(1, 'weekday', '09:00', '20:00', 1.5, 0), workCategory: 'regular',
+    hasReturnWork: true, returnStart: '21:00', returnEnd: '23:30', returnRegular: 3.5, regular: 5.0, lateNight: 1.0 };
+  const file = JSON.stringify({ format: 'overtime-backup', version: 1, entries: [stale] });
+  await evalIn(() => {
+    window.__alerts = []; window.alert = m => window.__alerts.push(m); window.confirm = () => true;
+  });
+  await page.click('.tab-btn:has-text("設定")');
+  await page.setInputFiles('#backupFile', { name: 'old.json', mimeType: 'application/json', buffer: Buffer.from(file) });
+  await page.waitForFunction(() => /件を復元しました/.test(document.getElementById('backupStatus').textContent));
+  const got = await evalIn(() => ({
+    alerts: window.__alerts,
+    stored: JSON.parse(localStorage.getItem(STORAGE_KEY)).map(e => [e.regular, e.lateNight]),
+  }));
+  await resetEntries();
+  assert.deepEqual(got.stored, [[2.5, 1]], '5.0H → 2.5H に直して保存');
+  assert.equal(got.alerts.length, 1);
+  assert.match(got.alerts[0], /1件を正しい値に直しました/);
 });
 
 // ===== 読み込み時の健全性 =====
